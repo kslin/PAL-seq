@@ -1,0 +1,5 @@
+NUM_SKIP = 10
+
+NUC_ORDER = ['A','C','G','T']
+
+UPPERBOUND, LOWERBOUND = 5, -5
