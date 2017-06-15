@@ -1,9 +1,13 @@
+import concurrent.futures
 import gzip
 from optparse import OptionParser
+import os
+import time
 
 import numpy as np
 import pandas as pd
 
+import config
 import helpers
 
 
@@ -14,14 +18,20 @@ if __name__ == '__main__':
     parser.add_option("--l1", dest="LEN1", type="int", help="length of read1 used")
     parser.add_option("--f2", dest="FASTQ2", help="fastq file for 3' reads")
     parser.add_option("--l2", dest="LEN2", type="int", help="length of read2 used")
+    parser.add_option("-a", dest="ALIGN", help="file of alignments")
     parser.add_option("-i", "--intensity", dest="INTENSITY", help="intensity file for read2")
-    parser.add_option("-o","--outfile", dest="OUTFILE", help="output file for signals")
+    parser.add_option("-o","--outdir", dest="OUTDIR", help="output directory")
+    parser.add_option("-f", "--futures", dest="FUTURES", type="int", default=0, help="number of threads to use")
 
     (options, args) = parser.parse_args()
 
+    # if the output directory doesn't exist, make it
+    if not os.path.exists(options.OUTDIR):
+        os.makedirs(options.OUTDIR)
+
     # read in fastq1 and make a dictionary of reads
+    print("Reading fastq1...")
     FASTQ1 = options.FASTQ1
-    options.LEN1 = 50
     read_dict = {}
     with gzip.open(FASTQ1, 'r') as f:
         identifier = None
@@ -34,7 +44,19 @@ if __name__ == '__main__':
             else:
                 continue
 
+
+    # read in alignment file and make a dictionary of reads to gene names
+    print("Reading alignment file...")
+    gene_dict = {}
+    with open(options.ALIGN, 'rb') as f:
+        for line in f:
+            line = line.decode().split()
+            seq_id = helpers.get_identifier(line[0])
+            gene_dict[seq_id] = line[2]
+
+
     # read in fastq2 and make a dictionary of tail starts
+    print("Reading fastq2...")
     start_dict = {}
     with gzip.open(options.FASTQ2,'rb') as f:
         for line in f:
@@ -45,45 +67,106 @@ if __name__ == '__main__':
                 start_dict[seq_id] = int(line[-1])
 
 
-    # read in intensity file
-    seq_ids = []
-    t_signals = []
-    starts = []
-    missed1, missed2 = 0,0
-    with gzip.open(options.INTENSITY,'rb') as f:
-        for i, line in enumerate(f):
-            line = line.decode().replace('\n','').split('\t')
-            seq_id = ':'.join(line[:3])
-            signal = np.array([[int(i) for i in x.split()] for x in line[4:]])
-            
-            # skip if you find a bunch of zeros
-            if list(np.std(signal, axis=1)).count(0) > 5:
-                missed1 += 1
-                continue
+    ### Read in intensity file and calculate normalized t-signal ###
+    print("Writing normalized t-signal outputs to {}".format(options.OUTDIR))
+
+    # keep track of how many reads we skip due having too many 0's
+    skipped = 0
+    skipped_notfound = 0
+
+    # create an iterator that read in the data in chunks
+    chunk_iterator = pd.read_csv(options.INTENSITY, delim_whitespace=True, header=None,
+                                 iterator=True, chunksize=config.CHUNKSIZE)
+
+    # these are the columns with the signal values
+    signal_columns = np.arange(4*(options.LEN1 + options.LEN2)) + 4
+
+    # if indicated, run parallel version
+    if options.FUTURES > 0:
+        print("Running parallel version")
         
-            # normalize by the average intensities for each nucleotide in read1
-            read1_sequence = read_dict[seq_id]
-            # signal = helpers.get_normalized_intensities(signal, read1_sequence, options.LEN1, options.LEN2)
-            signal = helpers.get_normalized_intensities2(signal, read1_sequence, options.LEN1, options.LEN2)
+        chunks = []
 
-            if signal is None:
-                continue
+        # iterate through chunks, add gene, read, etc information, append to list of chunks
+        with open(os.path.join(options.OUTDIR, 'normalized_t_signal.txt'), 'w') as outfile:
+            for chunknum, chunk in enumerate(chunk_iterator):
+                chunk['ID'] = chunk[0].astype(str) + ':' + chunk[1].astype(str) + ':' + chunk[2].astype(str)
+                chunk['gene'] = [gene_dict[seq_id] if seq_id in gene_dict else np.nan for seq_id in chunk['ID']]
+                chunk['start'] = [start_dict[seq_id] if seq_id in start_dict else np.nan for seq_id in chunk['ID']]
+                chunk['read1'] = [read_dict[seq_id] if seq_id in read_dict else np.nan for seq_id in chunk['ID']]
+                
+                chunk = chunk.dropna()
 
-            if seq_id not in start_dict:
-                continue
+                # record how many ids were not in the alignment/read files
+                skipped_notfound += (config.CHUNKSIZE - len(chunk))
 
-            # calculate t_signal from normalized intensities
-            # t_signal = helpers.get_t_signal(signal)
-            t_signal = helpers.get_t_signal2(signal, options.LEN1, options.LEN2)
+                chunks.append(((chunk['ID'].values, chunk['gene'].values, chunk['start'].values,
+                                chunk['read1'].values, chunk[signal_columns].values),
+                               options.LEN1, options.LEN2, config.NAN_LIMIT))
 
-            t_signals.append(t_signal)
-            seq_ids.append(seq_id)
-            starts.append(start_dict[seq_id])
+                # once we've read enough chunks, calculate t-signals in parallel
+                if len(chunks) == options.FUTURES:
+                    t0 = time.time()
+                    full_write_str = ''
+                    print("Processing up to line {}...".format((chunknum+1)*config.CHUNKSIZE))
+                    with concurrent.futures.ProcessPoolExecutor() as executor:
+                        results = executor.map(helpers.get_batch_t_signal, chunks)
+                        # results = executor.map(helpers.get_batch_t_signal_smooth, chunks)
 
-    print(missed1, missed2)
+                        # record how many signals were skipped and write results to a file
+                        for sk, wrstr in results:
+                            time.sleep(0.0001)
+                            skipped += sk
+                            full_write_str += wrstr
 
-    # write data as a dataframe to a file
-    t_signals = pd.DataFrame(np.array(t_signals))
-    t_signals['ID'] = seq_ids
-    t_signals['Tail_start'] = starts
-    t_signals.to_csv(options.OUTFILE,sep='\t',index=False)
+                    outfile.write(full_write_str)
+
+                    full_write_str = ''
+                    chunks = []
+
+                    print("{} seconds".format(time.time() - t0))
+
+            # calculate t-signals for the last chunk
+            with concurrent.futures.ProcessPoolExecutor() as executor:
+                # results = executor.map(helpers.get_batch_t_signal, chunks)
+                results = executor.map(helpers.get_batch_t_signal_smooth, chunks)
+                for sk, wrstr in results:
+                    skipped += sk
+                    outfile.write(wrstr)
+
+    # otherwise, run sequentially
+    else:
+        print("Running non-parallel version")
+        
+        # iterate through chunks, add gene, read, etc information
+        with open(os.path.join(options.OUTDIR, 'normalized_t_signal.txt'), 'w') as outfile:
+            for chunknum, chunk in enumerate(chunk_iterator):
+                chunk['ID'] = chunk[0].astype(str) + ':' + chunk[1].astype(str) + ':' + chunk[2].astype(str)
+                chunk['gene'] = [gene_dict[seq_id] if seq_id in gene_dict else np.nan for seq_id in chunk['ID']]
+                chunk['start'] = [start_dict[seq_id] if seq_id in start_dict else np.nan for seq_id in chunk['ID']]
+                chunk['read1'] = [read_dict[seq_id] if seq_id in read_dict else np.nan for seq_id in chunk['ID']]
+                
+                chunk = chunk.dropna()
+                print(len(chunk))
+
+                # record how many ids were not in the alignment/read files
+                skipped_notfound += (config.CHUNKSIZE - len(chunk))
+
+                # calculate t-signal
+                skipped, writestr = helpers.get_batch_t_signal(((chunk['ID'].values, chunk['gene'].values, chunk['start'].values,
+                                                       chunk['read1'].values, chunk[signal_columns].values),
+                                                       options.LEN1, options.LEN2, config.NAN_LIMIT))
+
+                # skipped, writestr = helpers.get_batch_t_signal_smooth(((chunk['ID'].values, chunk['gene'].values, chunk['start'].values,
+                #                                        chunk['read1'].values, chunk[signal_columns].values),
+                #                                        options.LEN1, options.LEN2, config.NAN_LIMIT))
+
+                # write to file
+                outfile.write(writestr)
+
+                if ((chunknum+1) % 10) == 0:
+                    print("Processed {} lines".format((chunknum+1)*config.CHUNKSIZE))
+
+
+    print("Skipped due to low quality: {}".format(skipped))
+    print("Skipped due to not being found in the alignment/read files: {}".format(skipped_notfound))

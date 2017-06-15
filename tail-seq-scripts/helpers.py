@@ -2,10 +2,8 @@ import math
 import sys
 import time
 
-import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import norm
-from sklearn.mixture import GaussianMixture
 
 import config
 
@@ -16,7 +14,7 @@ def get_identifier(raw_header):
 def fix_vals(x):
     if x > 0:
         return x
-    return 100.0
+    return 1.0
 
 v_fix_vals = np.vectorize(fix_vals)
 
@@ -36,7 +34,7 @@ def get_normalized_intensities(intensities, read1_sequence, len1, len2):
     assert(len(read1_sequence) == len1 - config.NUM_SKIP), "Read1 length must equal l1"
 
     # convert read1_sequence into one-hot encoding of 4 bits
-    read1_sequence = np.array([[int(nt == x) for x in config.NUC_ORDER] for nt in read1_sequence])
+    read1_sequence = np.array([[float(nt == x) for x in config.NUC_ORDER] for nt in read1_sequence])
 
     # assert(np.sum(read1_sequence) == (len1 - config.NUM_SKIP)), "Non-{} bases found in read1".format(config.NUC_ORDER)
 
@@ -89,386 +87,150 @@ def get_t_signal(intensities, upperbound=config.UPPERBOUND, lowerbound=config.LO
 
     return t_signal
 
-def get_normalized_intensities2(intensities, read1_sequence, len1, len2):
-    """Get average intensities for each nucleotide for use in normalizing"""
 
-    # skip the first 4 elements, which identify the read
-    # then skip the number of starting nucleotides specified in the config file
-    try:
-        intensities = intensities[config.NUM_SKIP:,:]
-        read1_sequence = read1_sequence[config.NUM_SKIP:]
-    except:
-        print("Intensities and sequences for read1 must be longer than config.NUM_SKIP")
-        sys.exit()
+def impute(signal, nanlimit):
+    """
+    Given the signal as an array, impute up to nanlimit rows of missing data.
+    If there are more than nanlimit, return None
+    """
+    # find all the rows with all zeros
+    zero_rows = (signal == [0,0,0,0]).all(axis=1)
+    zero_rows = np.nonzero(zero_rows)[0]
 
-    assert(len(intensities) == (len1 + len2 - config.NUM_SKIP)), "Intensities length not equal to l1 and l2"
-    assert(len(read1_sequence) == len1 - config.NUM_SKIP), "Read1 length must equal l1"
+    # if there are no rows of zeros, return signal as-is
+    if len(zero_rows) == 0:
+        return signal
 
-    # convert read1_sequence into one-hot encoding of 4 bits
-    read1_sequence = np.array([[int(nt == x) for x in config.NUC_ORDER] for nt in read1_sequence])
-
-    # assert(np.sum(read1_sequence) == (len1 - config.NUM_SKIP)), "Non-{} bases found in read1".format(config.NUC_ORDER)
-
-    # add up the counts for each nucleotide
-    read1_nt_counts = np.sum(read1_sequence, axis=0)
-
-    # return None if one or more of the nucleotides doesn't show up in the read1_sequence
-    if np.min(read1_nt_counts) == 0:
+    # if there are too many rows of zeros, return None
+    elif len(zero_rows) > nanlimit:
         return None
 
-    # convert intensities to an array and split into read1 and read2 intensities
-    read1_intensities = intensities[:len1 - config.NUM_SKIP]
-    read2_intensities = intensities[-1 * len2:]
-
-    # multiply read1 intensities by one-hot to get intensities for the base called
-    read1_intensities = np.multiply(read1_sequence, read1_intensities)
-
-    # add up read1_intensities for each nucleotide
-    read1_intensities = np.sum(read1_intensities, axis=0)
-
-    # get average read1_intensities for each nucleotide
-    norm_vals = np.divide(read1_intensities, read1_nt_counts)
-
-    # intensities_normed = np.divide(intensities, norm_vals)
-
-    return np.divide(intensities, norm_vals)
-
-def get_t_signal2(intensities, len1, len2, upperbound=1.6):
-
-    # find which index T is at in the intensity file
-    t_index = config.NUC_ORDER.index('T')
-    other_index = list(range(len(config.NUC_ORDER)))
-    other_index.remove(t_index)
-
-    t_channel = intensities[:, t_index]
-    other_channel = np.max(intensities[:, other_index], axis=1)
-
-    t_signal = t_channel - other_channel
-
-    # fit mixture model to determine normalization constant
-    A = GaussianMixture(n_components=2, covariance_type='diag')
-    A.fit(np.array(list(np.maximum(t_signal[:2*(len1 - config.NUM_SKIP)],0)) + [0]*10).reshape(-1,1))
-    norm_constant = np.max(A.means_)
-    if norm_constant <= 0:
-        norm_constant = np.max(t_signal[:len1 - config.NUM_SKIP])
-    t_signal = np.divide(t_signal, norm_constant)
-
-    t_signal = np.minimum(t_signal, upperbound)
-
-    return t_signal[-1 * len2:]
-
-
-def get_tail_length2(seq_id, t_signal, a_mu, a_sigma, nota_mu, nota_sigma, rates):
-    length = len(t_signal)
-    scores = np.zeros((3, length))
-    a_scores = norm.logpdf(t_signal, loc=a_mu, scale=a_sigma)
-    nota_scores = norm.logpdf(t_signal, loc=nota_mu, scale=nota_sigma)
-
-    prev = 0
-    for i in range(length):
-        prev += a_scores[i]
-        scores[0, i] = prev
-
-    scores[1,0] = -1 * np.inf
-    scores[2,0] = nota_scores[0]
-    path = np.zeros((2, length), dtype=int)
-    rate_dict = {}
-    
-    
-    prev = -1*np.inf
-    prev_signal = t_signal[0]
-    for j, t in enumerate(t_signal[1:]):
-        rate = rates[j+1]
-        trans_start = int(max(1, j+2 - max(1, np.round((t - a_mu[j+1])/rate))))
-        trans_len = int(j+2 - trans_start)
-        ix = np.arange(trans_start, j+2)
-        score = np.sum(norm.logpdf(t_signal[ix], loc=(((a_mu[ix] + t_signal[ix])/2) + (rate*(np.arange(1, 1+trans_len)))), scale=a_sigma))
-        continue_transition_score = scores[0, trans_start - 1] + score
-        new_transition_score = scores[0,j] + norm.logpdf(t, loc=a_mu[j+1]+rate, scale=a_sigma)
-
-        if (continue_transition_score > new_transition_score):
-            new_rate = (t - t_signal[trans_start-1])/trans_len
-            if new_rate < 0:
-                rate_dict[j+1] = new_rate
-            else:
-                rate_dict[j+1] = np.nan
-            path[0, j+1] = trans_len
-            new_score = continue_transition_score
-        else:
-            new_rate = t - t_signal[j]
-            if new_rate < 0:
-                rate_dict[j+1] = new_rate
-            else:
-                rate_dict[j+1] = np.nan
-            path[0, j+1] = 1
-            new_score = new_transition_score
-            
-        if prev > scores[2,j]: # T -> N
-            scores[2, j+1] = prev + nota_scores[j+1]
-            path[1, j+1] = 1
-        else:
-            scores[2, j+1] = scores[2,j] + nota_scores[j+1]
-
-        scores[1, j+1] = new_score
-        prev = new_score
-        prev_signal = t
-    
-    start = np.argmax(scores[:, -1])
-    if start == 0:
-        return seq_id, length, t_signal, [np.nan]*length, [np.nan]*length
-    elif start == 1:
-        trans_length = path[0,-1]
-        tail_length = int(length - trans_length)
-        return seq_id, tail_length, list(t_signal[:tail_length]) + [np.nan]*trans_length, [np.nan]*length, [np.nan]*(tail_length) + [rate_dict[length-1]]*trans_length
+    # otherwise, use the mean in a sliding window to fill in missing rows
     else:
-        if 1 not in list(path[1,:]):
-            return seq_id, 0, [np.nan]*length, t_signal, [np.nan]*length
-        n_length = list(path[1,:])[::-1].index(1)
-        trans_length = int(path[0,(length - n_length - 1)])
-        tail_length = int(length - n_length - trans_length)
-        A_vals = list(t_signal[:tail_length]) + [np.nan]*(trans_length + n_length)
-        notA_vals = [np.nan]*(tail_length + trans_length) + list(t_signal[tail_length + trans_length:])
-        new_rates = [np.nan]*(tail_length) + [rate_dict[(length - n_length - 1)]]*trans_length + [np.nan]*n_length
-        return seq_id, tail_length, A_vals, notA_vals, new_rates
+        signal = signal.astype(float)
+        
+        for row in zero_rows:
+            signal[row, :] = [np.nan]*signal.shape[1]
 
-def get_tail_length3(t_signal, a_mu, a_sigma, nota_mu, nota_sigma, rates):
-    length = len(t_signal)
-    a_scores = norm.logpdf(t_signal, loc=a_mu, scale=a_sigma)
-    nota_scores = norm.logpdf(t_signal, loc=nota_mu, scale=nota_sigma)
+        new_rows = []
+        for row in zero_rows:
+            subrows = signal[max(0, row - nanlimit): min(len(signal), row + nanlimit), :]
+            new_rows.append(np.round(np.nanmean(subrows, axis=0)))
 
-    scores = np.zeros((3, length))
-    prev = 0
-    for i in range(length):
-        prev += a_scores[i]
-        scores[0, i] = prev
+        for i, row in enumerate(zero_rows):
+            signal[row, :] = new_rows[i]
 
-    scores[1,0] = -1 * np.inf
-    scores[2,0] = nota_scores[0]
+        return signal.astype(int)
 
-    path = np.zeros((2, length), dtype=int)
-    
-    prev_score = -1*np.inf
-    prev_num = 0
-    prev_signal = t_signal[0]
-    for j, t in enumerate(t_signal[1:]):
-        rate = rates[j+1]
-        # prob of transition starting here
-        new_transition_score = scores[0, j] + norm.logpdf(t, loc=a_mu[j+1]+rate, scale=a_sigma)
 
-        # prob of continuing transition state
-        continue_transition_score = prev_score + norm.logpdf(t, loc=a_mu[j+1]+((prev_num+1)*rate), scale=a_sigma)
-        print(j+1)
-        print(scores[0, j], scores[0, j+1])
-        print(scores[1, j], new_transition_score, continue_transition_score)
-        print(scores[2, j], nota_scores[j+1])
+def get_batch_t_signal(all_params):
+    """
+    Calculates normalized t-signals for a batch of sequences.
+    Returns t-signal values as one long string to be written to a file.
+    """
+    params, len1, len2, nanlimit = all_params
+    write_str = ''
+    skipped = 0
 
-        if (continue_transition_score < new_transition_score):
-            path[0, j+1] = 1
-            new_score = new_transition_score
-            prev_num = 1
+    # iterate through signals in the batch
+    for (seq_id, gene, start, read1, signal) in zip(*params):
+        signal = signal.reshape((len1+len2, 4))
+
+        # impute missing data
+        signal = impute(signal, nanlimit)
+
+        # skip if too much missing data
+        if signal is None:
+            skipped += 1
+            continue
+
+        # calculate normalization
+        normed_signal = get_normalized_intensities(signal, read1, len1, len2)
+
+        # normalize t-signal and return the output as a string
+        if normed_signal is not None:
+            t_signal = get_t_signal(normed_signal)
+            write_str += '{}\t{}\t{}\t{}\n'.format(seq_id, gene, str(start),
+                                                  '\t'.join([str(x) for x in t_signal]))
+
         else:
-            path[0, j+1] = prev_num + 1
-            new_score = continue_transition_score
-            prev_num += 1
-            
-        if prev_score > scores[2,j]: # T -> N
-            scores[2, j+1] = prev_score + nota_scores[j+1]
-            path[1, j+1] = 1
-        else: # N -> N
-            scores[2, j+1] = scores[2,j] + nota_scores[j+1]
-
-        scores[1, j+1] = new_score
-        prev_score = new_score
-        prev_signal = t
+            skipped += 1
     
-    start = np.argmax(scores[:, -1])
-    if start == 0:
-        tail_length = length
-        A_vals = t_signal
-        notA_vals = [np.nan]*length
-        rate_vals = [np.nan]*length
-    elif start == 1:
-        trans_length = path[0,-1]
-        tail_length = int(length - trans_length)
-        A_vals = list(t_signal[:tail_length]) + [np.nan]*trans_length
-        notA_vals = [np.nan]*length
-        rate_vals = [np.nan]*(tail_length) + list((t_signal[tail_length:] - a_mu[tail_length:]) / np.arange(1,trans_length + 1))
-    else:
-        if 1 not in list(path[1,:]):
-            tail_length = 0
-            A_vals = [np.nan]*length
-            notA_vals = t_signal
-            rate_vals = [np.nan]*length
+    return skipped, write_str
+
+
+def smooth(x, window_len=21):
+    """smooth the data using a window with requested size.
+    
+    This method is based on the convolution of a scaled window with the signal.
+    The signal is prepared by introducing reflected copies of the signal 
+    (with the window size) in both ends so that transient parts are minimized
+    in the begining and end part of the output signal. (from scipy cookbook)
+    
+    input:
+        x: the input signal 
+        window_len: the dimension of the smoothing window; should be an odd integer
+        window: the type of window from 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'
+            flat window will produce a moving average smoothing.
+
+    output:
+        the smoothed signal
+        
+    NOTE: length(output) != length(input), to correct this: return y[(window_len/2-1):-(window_len/2)] instead of just y.
+    """
+
+    s=np.r_[x[window_len-1:0:-1],x,x[-2:-window_len-1:-1]]
+
+    return np.array([np.median(s[i-(window_len-1):i+(window_len-1)]) for i in range((window_len-1),len(x)+(window_len-1))])
+
+
+def get_batch_t_signal_smooth(all_params):
+    """
+    Calculates normalized t-signals for a batch of sequences.
+    Returns t-signal values as one long string to be written to a file.
+    """
+    params, len1, len2, nanlimit = all_params
+    write_str = ''
+    skipped = 0
+
+    # iterate through signals in the batch
+    for (seq_id, gene, start, read1, signal) in zip(*params):
+        signal = signal.reshape((len1+len2, 4))
+
+        # impute missing data
+        signal = impute(signal, nanlimit)
+
+        # skip if too much missing data
+        if signal is None:
+            skipped += 1
+            continue
+
+        # calculate normalization
+        normed_signal = get_normalized_intensities(signal, read1, len1, len2)
+
+        # normalize t-signal and return the output as a string
+        if normed_signal is not None:
+            for i in range(4):
+                normed_signal[:, i] = smooth(normed_signal[:, i])
+
+            t_signal = np.log(normed_signal[:,3])
+            other_signal = np.log(np.sum(normed_signal[:,:3], axis=1))
+
+            t_signal = t_signal - other_signal
+            write_str += '{}\t{}\t{}\t{}\n'.format(seq_id, gene, str(start),
+                                                  '\t'.join([str(x) for x in t_signal]))
+
         else:
-            n_length = list(path[1,:])[::-1].index(1) + 1
-            trans_length = int(path[0, (length - n_length - 1)])
-            tail_length = int(length - n_length - trans_length)
-            trans_index, n_index = tail_length, tail_length + trans_length
-
-            A_vals = list(t_signal[:tail_length]) + [np.nan]*(trans_length + n_length)
-            notA_vals = [np.nan]*(n_index) + list(t_signal[n_index:])
-            rate_vals = [np.nan]*(tail_length) + \
-                        list((t_signal[trans_index:n_index] - a_mu[trans_index:n_index]) / np.arange(1,trans_length + 1)) + \
-                        [np.nan]*n_length
+            skipped += 1
     
-    return tail_length, np.array(A_vals).reshape((1,length)), np.array(notA_vals).reshape((1,length)), np.array(rate_vals).reshape((1,length))
+    return skipped, write_str
 
 
-def get_tail_length_batch(seq_ids, t_signals, a_mu, a_sigma, nota_mu, nota_sigma, rates):
-    length = len(a_mu)
+def get_tail_length_from_emissions(emit):
+    emit = list((np.array(emit) == 0) + (np.array(emit) == 1)) + [0]
+    if 1 not in emit:
+        return 0
 
-    tail_lengths, a_val_arrays, nota_val_arrays, rate_arrays = [], [], [], []
-    for i in range(t_signals.shape[0]):
-        t_signal = t_signals[i, :]
-        tail_length, A_vals, notA_vals, rate_vals = get_tail_length3(t_signal, a_mu, a_sigma, nota_mu, nota_sigma, rates)
-        tail_lengths.append(tail_length)
-        a_val_arrays.append(A_vals)
-        nota_val_arrays.append(notA_vals)
-        rate_arrays.append(rate_vals)
-
-    return list(seq_ids), tail_lengths, a_val_arrays, nota_val_arrays, rate_arrays
-
-
-def add_logpdfs(x, y, min_val=-700):
-    if (x < min_val) & (y < min_val):
-        return min_val
-    if abs(x-y) > 4:
-        return max(x,y)
-    return min(x,y) + np.log1p(np.exp(abs(x-y)))
-
-add_logpdfs_vec = np.vectorize(add_logpdfs)
-
-
-def exp_fit(x, k):
-    return np.exp(((-1*k )/ (x))) - 1
-
-
-def get_tail_length_gmm(t_signal, tail_start, a_mu, a_sigma, nota_mu1, nota_sigma1, nota_mu2, nota_sigma2, ratio, rates):
-
-    original_length = len(t_signal)
-    t_signal = t_signal[tail_start:]
-    a_mu = a_mu[tail_start:]
-    a_sigma = a_sigma[tail_start:]
-    nota_mu1 = nota_mu1[tail_start:]
-    nota_sigma1 = nota_sigma1[tail_start:]
-    rates = rates[tail_start:]
-
-    length = len(t_signal)
-    a_scores = norm.logpdf(t_signal, loc=a_mu, scale=a_sigma)
-    # nota_scores1 = norm.logpdf(t_signal, loc=nota_mu1, scale=nota_sigma1) + np.log(ratio)
-    # nota_scores2 = norm.logpdf(t_signal, loc=nota_mu2, scale=nota_sigma2) + np.log(1.0 - ratio)
-
-    # nota_scores = add_logpdfs_vec(nota_scores1,nota_scores2)
-
-    nota_scores = norm.logpdf(t_signal, loc=nota_mu1, scale=nota_sigma1)
-
-    scores = np.zeros((3, length))
-    prev = 0
-    for i in range(length):
-        prev += a_scores[i]
-        scores[0, i] = prev
-
-    scores[1,0] = -1 * np.inf
-    scores[2,0] = nota_scores[0]
-
-    path = np.zeros((2, length), dtype=int)
-    
-    prev_score = -1*np.inf
-    prev_num = 0
-    prev_signal = t_signal[0]
-    for j, t in enumerate(t_signal[1:]):
-        rate = rates[j+1]
-        # prob of transition starting here
-        new_transition_score = scores[0, j] + norm.logpdf(t, loc=a_mu[j+1]+rate, scale=a_sigma[j+1])
-
-        # prob of continuing transition state
-        continue_transition_score = prev_score + norm.logpdf(t, loc=a_mu[j+1]+((prev_num+1)*rate), scale=a_sigma[j+1])
-
-        if (continue_transition_score < new_transition_score):
-            path[0, j+1] = 1
-            new_score = new_transition_score
-            prev_num = 1
-        else:
-            path[0, j+1] = prev_num + 1
-            new_score = continue_transition_score
-            prev_num += 1
-            
-        if prev_score > scores[2,j]: # T -> N
-            scores[2, j+1] = prev_score + nota_scores[j+1]
-            path[1, j+1] = 1
-        else: # N -> N
-            scores[2, j+1] = scores[2,j] + nota_scores[j+1]
-
-        scores[1, j+1] = new_score
-        prev_score = new_score
-        prev_signal = t
-    
-    start = np.argmax(scores[:, -1])
-    if start == 0:
-        tail_length = length
-        A_vals = list(t_signal)
-        notA_vals = [np.nan]*length
-        rate_vals = [np.nan]*length
-    elif start == 1:
-        trans_length = path[0,-1]
-        tail_length = int(length - trans_length)
-        A_vals = list(t_signal[:tail_length]) + [np.nan]*trans_length
-        notA_vals = [np.nan]*length
-        rate_vals = [np.nan]*(tail_length) + list((t_signal[tail_length:] - a_mu[tail_length:]) / np.arange(1,trans_length + 1))
-    else:
-        if 1 not in list(path[1,:]):
-            tail_length = 0
-            A_vals = [np.nan]*length
-            notA_vals = list(t_signal)
-            rate_vals = [np.nan]*length
-        else:
-            n_length = list(path[1,:])[::-1].index(1) + 1
-            trans_length = int(path[0, (length - n_length - 1)])
-            tail_length = int(length - n_length - trans_length)
-            trans_index, n_index = tail_length, tail_length + trans_length
-
-            A_vals = list(t_signal[:tail_length]) + [np.nan]*(trans_length + n_length)
-            notA_vals = [np.nan]*(n_index) + list(t_signal[n_index:])
-            rate_vals = [np.nan]*(tail_length) + \
-                        list((t_signal[trans_index:n_index] - a_mu[trans_index:n_index]) / np.arange(1,trans_length + 1)) + \
-                        [np.nan]*n_length
-    
-    return tail_length, np.array(([np.nan]*tail_start) + A_vals).reshape((1,original_length)), np.array(([np.nan]*tail_start) + notA_vals).reshape((1,original_length)), np.array(([np.nan]*tail_start) + rate_vals).reshape((1,original_length))
-
-
-def get_tail_length_batch_gmm(seq_ids, starts, t_signals, a_mu, a_sigma, nota_mu1, nota_sigma1, nota_mu2, nota_sigma2, ratio, rates):
-    length = len(a_mu)
-
-    tail_lengths, a_val_arrays, nota_val_arrays, rate_arrays = [], [], [], []
-    for i in range(t_signals.shape[0]):
-        t_signal = t_signals[i, :]
-        tail_length, A_vals, notA_vals, rate_vals = get_tail_length_gmm(t_signal, starts[i], a_mu, a_sigma, nota_mu1, nota_sigma1,
-                                                                        nota_mu2, nota_sigma2, ratio, rates)
-        tail_lengths.append(tail_length)
-        a_val_arrays.append(A_vals)
-        nota_val_arrays.append(notA_vals)
-        rate_arrays.append(rate_vals)
-
-    return list(seq_ids), tail_lengths, a_val_arrays, nota_val_arrays, rate_arrays
-
-
-# a_mu = np.array([1,1,1,1,2,2,2,2,2,2,2,2,2])
-# a_sigma = 0.1
-# nota_mu1 = a_mu * 0.5
-# nota_sigma1 = 0.1
-# nota_mu2 = 0
-# nota_sigma2 = 0.1
-# # nota_sigma1 = np.array([0.1]*10)
-# rates = np.array([-1,-1,-1,-0.9,-0.7,-0.6,-0.5,-0.5,-0.5,-0.5,-0.5,-0.5,-0.5])
-# ratio = 0.5
-
-# t_signal = np.array([[1,1,1,0,1,1,0,1,0,1,0,1,1],[1,1,1,1,2,1.5,1,0.5,0,1,1,0,1]])
-# t0 = time.time()
-# for i in range(t_signal.shape[0]):
-#     print(t_signal[i, :])
-#     print(get_tail_length_gmm(t_signal[i,:], 0, a_mu, a_sigma, nota_mu1, nota_sigma1, nota_mu2, nota_sigma2, ratio, rates))
-# print(time.time() - t0)
-
-
-
-
+    start = emit.index(1)
+    end  = emit.index(0, start)
+    return end - start
