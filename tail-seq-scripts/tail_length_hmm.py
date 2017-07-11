@@ -158,9 +158,9 @@ if __name__ == '__main__':
             print('Calculated {} out of {}'.format(finished, file_length))
 
     # write tail lengths to a file
-    tail_length_df.to_csv(os.path.join(options.OUTDIR, 'tail_lengths_not_smooth.txt'), sep='\t', index=False)
+    tail_length_df.to_csv(os.path.join(options.OUTDIR, 'tail_lengths.txt'), sep='\t', index=False)
 
     # get median tail lengths and write to a separate file
     tail_length_df['Num tags'] = [1]*len(tail_length_df)
     tail_length_df = tail_length_df.groupby('Gene_name').agg({'Tail_length': [np.median, np.mean], 'Num tags': len})
-    tail_length_df.to_csv(os.path.join(options.OUTDIR, 'median_tail_lengths_not_smooth.txt'), sep='\t')
+    tail_length_df.to_csv(os.path.join(options.OUTDIR, 'median_tail_lengths.txt'), sep='\t')

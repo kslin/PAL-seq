@@ -35,8 +35,11 @@ def get_normalized_intensities(intensities, read1_sequence, len1, len2):
     except:
         print("Intensities and sequences for read1 must be longer than config.NUM_SKIP")
 
-    assert(len(intensities) == (len1 + len2 - config.NUM_SKIP)), "Intensities length not equal to l1 and l2"
-    assert(len(read1_sequence) == len1 - config.NUM_SKIP), "Read1 length must equal l1"
+    if len(intensities) != (len1 + len2 - config.NUM_SKIP):
+        raise ValueError("Intensities length not equal to len1 + len2")
+
+    if len(read1_sequence) != (len1 - config.NUM_SKIP):
+        raise ValueError("Read1 length must equal len1")
 
     # convert read1_sequence into one-hot encoding of 4 bits
     read1_sequence = np.array([[float(nt == x) for x in config.NUC_ORDER] for nt in read1_sequence])
@@ -132,7 +135,7 @@ def get_batch_t_signal(all_params):
     Calculate normalized t-signals for a batch of sequences.
     Return t-signal values as one long string to be written to a file.
     """
-    params, len1, len2, nanlimit = all_params
+    params, len1, len2 = all_params
     write_str = ''
     skipped = 0
 
@@ -141,7 +144,7 @@ def get_batch_t_signal(all_params):
         signal = signal.reshape((len1+len2, 4))
 
         # impute missing data
-        signal = impute(signal, nanlimit)
+        signal = impute(signal, config.NAN_LIMIT)
 
         # skip if too much missing data
         if signal is None:

@@ -39,7 +39,8 @@ if __name__ == '__main__':
             if (i % 4) == 0:
                 identifier = helpers.get_identifier(line.decode())
             elif (i % 4) == 1:
-                assert(len(line) == (options.LEN1 + 1)), "Reads in fastq1 must match given length"
+                if(len(line) != (options.LEN1 + 1)):
+                    raise ValueError("Reads in fastq1 must match given length")
                 read_dict[identifier] = line.decode().replace('\n','')
             else:
                 continue
@@ -100,7 +101,7 @@ if __name__ == '__main__':
 
                 chunks.append(((chunk['ID'].values, chunk['gene'].values, chunk['start'].values,
                                 chunk['read1'].values, chunk[signal_columns].values),
-                               options.LEN1, options.LEN2, config.NAN_LIMIT))
+                               options.LEN1, options.LEN2))
 
                 # once we've read enough chunks, calculate t-signals in parallel
                 if len(chunks) == options.FUTURES:
@@ -151,7 +152,7 @@ if __name__ == '__main__':
                 # calculate t-signal
                 skipped, writestr = helpers.get_batch_t_signal(((chunk['ID'].values, chunk['gene'].values, chunk['start'].values,
                                                        chunk['read1'].values, chunk[signal_columns].values),
-                                                       options.LEN1, options.LEN2, config.NAN_LIMIT))
+                                                       options.LEN1, options.LEN2))
 
                 # write to file
                 outfile.write(writestr)
