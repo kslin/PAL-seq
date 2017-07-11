@@ -21,7 +21,7 @@ if __name__ == '__main__':
     parser.add_option("-a", dest="ALIGN", help="file of alignments")
     parser.add_option("-i", "--intensity", dest="INTENSITY", help="intensity file for read2")
     parser.add_option("-o","--outdir", dest="OUTDIR", help="output directory")
-    parser.add_option("-f", "--futures", dest="FUTURES", type="int", default=0, help="number of threads to use")
+    parser.add_option("-f", "--futures", dest="FUTURES", type="int", default=1, help="number of threads to use")
 
     (options, args) = parser.parse_args()
 
@@ -66,8 +66,6 @@ if __name__ == '__main__':
                 seq_id = ':'.join(line[2:5]).split('#')[0]
                 start_dict[seq_id] = int(line[-1])
 
-
-    ### Read in intensity file and calculate normalized t-signal ###
     print("Writing normalized t-signal outputs to {}".format(options.OUTDIR))
 
     # keep track of how many reads we skip due having too many 0's
@@ -82,7 +80,7 @@ if __name__ == '__main__':
     signal_columns = np.arange(4*(options.LEN1 + options.LEN2)) + 4
 
     # if indicated, run parallel version
-    if options.FUTURES > 0:
+    if options.FUTURES > 1:
         print("Running parallel version")
         
         chunks = []
@@ -111,7 +109,6 @@ if __name__ == '__main__':
                     print("Processing up to line {}...".format((chunknum+1)*config.CHUNKSIZE))
                     with concurrent.futures.ProcessPoolExecutor() as executor:
                         results = executor.map(helpers.get_batch_t_signal, chunks)
-                        # results = executor.map(helpers.get_batch_t_signal_smooth, chunks)
 
                         # record how many signals were skipped and write results to a file
                         for sk, wrstr in results:
@@ -128,8 +125,7 @@ if __name__ == '__main__':
 
             # calculate t-signals for the last chunk
             with concurrent.futures.ProcessPoolExecutor() as executor:
-                # results = executor.map(helpers.get_batch_t_signal, chunks)
-                results = executor.map(helpers.get_batch_t_signal_smooth, chunks)
+                results = executor.map(helpers.get_batch_t_signal, chunks)
                 for sk, wrstr in results:
                     skipped += sk
                     outfile.write(wrstr)
@@ -156,10 +152,6 @@ if __name__ == '__main__':
                 skipped, writestr = helpers.get_batch_t_signal(((chunk['ID'].values, chunk['gene'].values, chunk['start'].values,
                                                        chunk['read1'].values, chunk[signal_columns].values),
                                                        options.LEN1, options.LEN2, config.NAN_LIMIT))
-
-                # skipped, writestr = helpers.get_batch_t_signal_smooth(((chunk['ID'].values, chunk['gene'].values, chunk['start'].values,
-                #                                        chunk['read1'].values, chunk[signal_columns].values),
-                #                                        options.LEN1, options.LEN2, config.NAN_LIMIT))
 
                 # write to file
                 outfile.write(writestr)

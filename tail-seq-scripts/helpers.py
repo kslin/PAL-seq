@@ -1,42 +1,45 @@
-import math
-import sys
-import time
-
 import numpy as np
-from scipy.stats import norm
 
 import config
 
 
 def get_identifier(raw_header):
+    """Extract sequencing cluster identifier from header. """
     return ':'.join(raw_header.split(':')[2:5]).split('#')[0]
 
+
 def fix_vals(x):
+    """Convert negative values to 1."""
     if x > 0:
         return x
     return 1.0
 
+
+# vectorize fix_vals
 v_fix_vals = np.vectorize(fix_vals)
 
-def get_normalized_intensities(intensities, read1_sequence, len1, len2):
-    """Get average intensities for each nucleotide for use in normalizing"""
 
-    # skip the first 4 elements, which identify the read
-    # then skip the number of starting nucleotides specified in the config file
+def get_normalized_intensities(intensities, read1_sequence, len1, len2):
+    """Use average intensities for the nucleotides in read1 to normalize the signals for read2.
+
+    Arguments:
+        intensities - numpy array of shape (len1 + len2) x (number of nucleotides i.e. 4)
+        read1_sequence - string sequence of read1
+        len1 - length of read1 as an int
+        len2 - length of read2 as an int
+    """
+    # skip the number of starting nucleotides specified in the config file
     try:
         intensities = intensities[config.NUM_SKIP:,:]
         read1_sequence = read1_sequence[config.NUM_SKIP:]
     except:
         print("Intensities and sequences for read1 must be longer than config.NUM_SKIP")
-        sys.exit()
 
     assert(len(intensities) == (len1 + len2 - config.NUM_SKIP)), "Intensities length not equal to l1 and l2"
     assert(len(read1_sequence) == len1 - config.NUM_SKIP), "Read1 length must equal l1"
 
     # convert read1_sequence into one-hot encoding of 4 bits
     read1_sequence = np.array([[float(nt == x) for x in config.NUC_ORDER] for nt in read1_sequence])
-
-    # assert(np.sum(read1_sequence) == (len1 - config.NUM_SKIP)), "Non-{} bases found in read1".format(config.NUC_ORDER)
 
     # add up the counts for each nucleotide
     read1_nt_counts = np.sum(read1_sequence, axis=0)
@@ -46,7 +49,6 @@ def get_normalized_intensities(intensities, read1_sequence, len1, len2):
         return None
 
     # convert intensities to an array and split into read1 and read2 intensities
-    # intensities = np.array([[int(x) for x in i.split()] for i in intensities])
     read1_intensities = intensities[:len1 - config.NUM_SKIP]
     read2_intensities = intensities[-1 * len2:]
 
@@ -63,11 +65,13 @@ def get_normalized_intensities(intensities, read1_sequence, len1, len2):
     # get average read1_intensities for each nucleotide
     norm_vals = np.divide(read1_intensities, read1_nt_counts)
 
+    # divide read2 intensities by normalization values
     read2_intensities_normed = np.divide(read2_intensities, norm_vals)
 
     return read2_intensities_normed
 
-def get_t_signal(intensities, upperbound=config.UPPERBOUND, lowerbound=config.LOWERBOUND):
+def get_t_signal(intensities):
+    """Divide T intensity by the sum of the other intensities to get the t-signal"""
 
     # find which index T is at in the intensity file
     t_index = config.NUC_ORDER.index('T')
@@ -82,8 +86,8 @@ def get_t_signal(intensities, upperbound=config.UPPERBOUND, lowerbound=config.LO
     t_signal = np.log2(np.divide(t_channel, background))
 
     # bound the signal
-    t_signal = np.minimum(t_signal, upperbound)
-    t_signal = np.maximum(t_signal, lowerbound)
+    t_signal = np.minimum(t_signal, config.UPPERBOUND)
+    t_signal = np.maximum(t_signal, config.LOWERBOUND)
 
     return t_signal
 
@@ -91,7 +95,7 @@ def get_t_signal(intensities, upperbound=config.UPPERBOUND, lowerbound=config.LO
 def impute(signal, nanlimit):
     """
     Given the signal as an array, impute up to nanlimit rows of missing data.
-    If there are more than nanlimit, return None
+    If there are more than nanlimit, return None.
     """
     # find all the rows with all zeros
     zero_rows = (signal == [0,0,0,0]).all(axis=1)
@@ -125,8 +129,8 @@ def impute(signal, nanlimit):
 
 def get_batch_t_signal(all_params):
     """
-    Calculates normalized t-signals for a batch of sequences.
-    Returns t-signal values as one long string to be written to a file.
+    Calculate normalized t-signals for a batch of sequences.
+    Return t-signal values as one long string to be written to a file.
     """
     params, len1, len2, nanlimit = all_params
     write_str = ''
@@ -159,74 +163,11 @@ def get_batch_t_signal(all_params):
     return skipped, write_str
 
 
-def smooth(x, window_len=21):
-    """smooth the data using a window with requested size.
-    
-    This method is based on the convolution of a scaled window with the signal.
-    The signal is prepared by introducing reflected copies of the signal 
-    (with the window size) in both ends so that transient parts are minimized
-    in the begining and end part of the output signal. (from scipy cookbook)
-    
-    input:
-        x: the input signal 
-        window_len: the dimension of the smoothing window; should be an odd integer
-        window: the type of window from 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'
-            flat window will produce a moving average smoothing.
-
-    output:
-        the smoothed signal
-        
-    NOTE: length(output) != length(input), to correct this: return y[(window_len/2-1):-(window_len/2)] instead of just y.
-    """
-
-    s=np.r_[x[window_len-1:0:-1],x,x[-2:-window_len-1:-1]]
-
-    return np.array([np.median(s[i-(window_len-1):i+(window_len-1)]) for i in range((window_len-1),len(x)+(window_len-1))])
-
-
-def get_batch_t_signal_smooth(all_params):
-    """
-    Calculates normalized t-signals for a batch of sequences.
-    Returns t-signal values as one long string to be written to a file.
-    """
-    params, len1, len2, nanlimit = all_params
-    write_str = ''
-    skipped = 0
-
-    # iterate through signals in the batch
-    for (seq_id, gene, start, read1, signal) in zip(*params):
-        signal = signal.reshape((len1+len2, 4))
-
-        # impute missing data
-        signal = impute(signal, nanlimit)
-
-        # skip if too much missing data
-        if signal is None:
-            skipped += 1
-            continue
-
-        # calculate normalization
-        normed_signal = get_normalized_intensities(signal, read1, len1, len2)
-
-        # normalize t-signal and return the output as a string
-        if normed_signal is not None:
-            for i in range(4):
-                normed_signal[:, i] = smooth(normed_signal[:, i])
-
-            t_signal = np.log(normed_signal[:,3])
-            other_signal = np.log(np.sum(normed_signal[:,:3], axis=1))
-
-            t_signal = t_signal - other_signal
-            write_str += '{}\t{}\t{}\t{}\n'.format(seq_id, gene, str(start),
-                                                  '\t'.join([str(x) for x in t_signal]))
-
-        else:
-            skipped += 1
-    
-    return skipped, write_str
-
-
 def get_tail_length_from_emissions(emit):
+    """
+    Get the tail length from HMM emissions.
+    Return the longest string of contiguous 0's before the first 1
+    """
     emit = list((np.array(emit) == 0) + (np.array(emit) == 1)) + [0]
     if 1 not in emit:
         return 0
