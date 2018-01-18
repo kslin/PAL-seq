@@ -19,4 +19,4 @@ python tail-seq-scripts/plot_t_signals.py [-s normalized_signal.txt (from get_si
 
 3. Train Gaussian Mixture HMM and call tail-lengths:
 
-python tail-seq-scripts/tail_length_hmm.py [-s normalized_signal.txt (from get_signal.py)] [-l read2 length] [-o output_directory] [-t train size, default 10000] [-m max iter, default 10000)] [--tol tolerance, default 0.01] [-f specify number of threads, default 1]
+python tail-seq-scripts/tail_length_hmm.py [-s normalized_signal.txt (from get_signal.py)] [-l read2 length] [-o output_directory] [--twostate toggles between 2-state and 3-state model, default False] [-t train size, default 10000] [-m max iter, default 10000)] [--tol tolerance, default 0.01] [-f specify number of threads, default 1]

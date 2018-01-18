@@ -18,6 +18,7 @@ if __name__ == '__main__':
     parser.add_option("-s", dest="SIGNAL", help="signal file output from get_signal.py")
     parser.add_option("-l", dest="LEN", type="int", help="length of read2")
     parser.add_option("-o", "--outdir", dest="OUTDIR", help="output directory")
+    parser.add_option("--twostate", action="store_true", dest="TWOSTATE", default=False, help="toggle for 2-state model")
     parser.add_option("-t", dest="TRAIN_SIZE", type="int", default=10000, help="size of training set")
     parser.add_option("-m", dest="MAXITER", type="int", default=10000, help="maximum number of iterations")
     parser.add_option("--tol", dest="TOL", type="float", default=0.01, help="tolerance for EM algorithm")
@@ -72,8 +73,14 @@ if __name__ == '__main__':
     # create HMM model
     F = ghmm.Float()
 
+    if options.TWOSTATE:
+        params = config.HMM_PARAMS_2STATE
+    else:
+        params = config.HMM_PARAMS_3STATE
+
     MODEL = ghmm.HMMFromMatrices(F, ghmm.GaussianMixtureDistribution(F),
-                                 config.TRANSITIONMATRIX, config.EMISSIONMATRIX, config.PI)
+                                     params["TRANSITIONMATRIX"], params["EMISSIONMATRIX"], params["PI"])
+
 
     trainingset = ghmm.SequenceSet(F, t_signals_train)
 
