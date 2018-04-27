@@ -1,6 +1,25 @@
 import numpy as np
 
+def fastq_header_to_ID(line):
+  """
+  Convert fastq header to read ID
+  """
+  return line.split('/')[0].replace('WIGTC-HISEQ:2:','')
+
+def intensity_line_to_ID(line):
+  """
+  Extract read ID from intensity line
+  """
+  read_ID = line.split()[:4]
+  read_ID = '{}:{}:{}#{}'.format(read_ID[0], read_ID[1], read_ID[2], read_ID[3])
+  return read_ID
+
 ### data configurations ###
+
+LEN1, LEN2 = 50, 250
+
+SIGNAL_COL_START = 4
+SIGNAL_COL_END = (4*(LEN1 + LEN2)) + 4
 
 NUM_SKIP = 10
 
