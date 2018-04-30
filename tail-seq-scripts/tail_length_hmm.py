@@ -16,7 +16,6 @@ if __name__ == '__main__':
 
     parser = OptionParser()
     parser.add_option("-s", dest="SIGNAL", help="signal file output from get_signal.py")
-    parser.add_option("-l", dest="LEN", type="int", help="length of read2")
     parser.add_option("-o", "--outdir", dest="OUTDIR", help="output directory")
     parser.add_option("--twostate", action="store_true", dest="TWOSTATE", default=False, help="toggle for 2-state model")
     parser.add_option("-t", dest="TRAIN_SIZE", type="int", default=10000, help="size of training set")
@@ -56,12 +55,12 @@ if __name__ == '__main__':
 
     # read in data, skipping all rows except the training rows
     t_signals_train = pd.read_csv(options.SIGNAL, sep='\t', skiprows=skip_ix)#.set_index('ID')
-    t_signals_train.columns = ['ID','Gene_name','Tail_start'] + [str(i) for i in range(options.LEN)]
+    t_signals_train.columns = ['ID','Tail_start'] + [str(i) for i in range(config.LEN2)]
     t_signals_train = t_signals_train.set_index('ID')
 
     # read in signal data from get_signal.py
-    starts = np.array(t_signals_train['Tail_start'])
-    t_signals_train = t_signals_train.drop(['Gene_name','Tail_start'], 1)
+    starts = t_signals_train['Tail_start'].values
+    t_signals_train = t_signals_train.drop(['Tail_start'], 1)
     seq_ids = np.array(t_signals_train.index)
     t_signals_train = t_signals_train.values.tolist()
 

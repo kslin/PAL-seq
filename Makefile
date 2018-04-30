@@ -3,19 +3,21 @@ fastq2="/lab/solexa_public/Bartel/171211_WIGTC-HISEQA_HVL3JBCXY/QualityScore/TAG
 genomeDir="/lab/solexa_bartel/teisen/RNAseq/indices/STAR_mm10/"
 gff="/lab/solexa_bartel/eichhorn/5EU_RPF/miR-1_miR-155_timecourse_tail_analysis/Annotations/mm10_tpUTR.gff"
 outdir="/lab/bartel4_ata/kathyl/Tail_Seq/testing_outputs"
+# intensity="/lab/bartel4_ata/kathyl/Tail_Seq/testing_outputs/mini_intensity.txt.gz"
 intensity="/archive/bartel/2017.12.29-18701/solexa_bartel/tail-seq/171211_WIGTC-HISEQA_0778_HVL3JBCXY/TAGTGC-s_2_hits.txt.gz"
 standard_file="/lab/bartel4_ata/kathyl/Tail_Seq/tail-seq/tail-seq-scripts/standard_sequences.txt"
 
 move-files:
-	tar -xOzf $(fastq1) | fastx_reverse_complement | gzip > $(outdir)/fastq1_revcomp.txt.gz
+	mkdir -p $(outdir)
+	tar -xOzf $(fastq1) | gzip > $(outdir)/fastq1.txt.gz
 	tar -xOzf $(fastq2) | gzip > $(outdir)/fastq2.txt.gz
 
 align-to-genome: ## Align rest of reads to genome and intersect with gff file
-	STAR --genomeDir $(genomeDir) --outSAMtype BAM SortedByCoordinate --outSAMattributes NH HI AS nM jM --alignIntronMax 1 --runThreadN 24 --outFilterMultimapNmax 1 --outFilterMismatchNoverLmax 0.04 --outFilterIntronMotifs RemoveNoncanonicalUnannotated --outSJfilterReads Unique  --readFilesCommand zcat --readFilesIn $(outdir)/fastq1_revcomp.txt.gz $ --outFileNamePrefix $(outdir)/STAR_ > $(outdir)/stdOut_logFile.txt
-	bedtools intersect -abam $(outdir)/STAR_Aligned.sortedByCoord.out.bam -b $(gff) -bed -wb -s > $(outdir)/read1.bed
+	STAR --genomeDir $(genomeDir) --outSAMtype BAM SortedByCoordinate --outSAMattributes NH HI AS nM jM --alignIntronMax 1 --runThreadN 24 --outFilterMultimapNmax 1 --outFilterMismatchNoverLmax 0.04 --outFilterIntronMotifs RemoveNoncanonicalUnannotated --outSJfilterReads Unique  --readFilesCommand zcat --readFilesIn $(outdir)/fastq1.txt.gz $ --outFileNamePrefix $(outdir)/STAR_ > $(outdir)/stdOut_logFile.txt
+	bedtools intersect -abam $(outdir)/STAR_Aligned.sortedByCoord.out.bam -b $(gff) -bed -wb -S > $(outdir)/read1.bed
 
 signal-from-raw: ## Extract intensities for mapping reads and calculate normalized T-signal
-	python tail-seq-scripts/get_signal_from_raw.py --f1 $(outdir)/fastq1_revcomp.txt.gz --f2 $(outdir)/fastq2.txt.gz -b $(outdir)/read1.bed -i /lab/solexa_bartel/tail-seq_data_links/171221_WIGTC-HISEQB_0779_HVJN7BCXY/TAGTGC-s_2_hits.txt.gz -s $(standard_file) -o $(outdir) -t $(outdir)/short_tails.txt -d $(outdir)/dropped_reads.txt -f 24
+	python tail-seq-scripts/get_signal_from_raw.py --f1 $(outdir)/fastq1.txt.gz --f2 $(outdir)/fastq2.txt.gz -b $(outdir)/read1.bed -i $(intensity) -s $(standard_file) -o $(outdir) -t $(outdir)/short_tails.txt -d $(outdir)/dropped_reads.txt -f 24
 
 signal-plot: ## Plot T-signal density
 	python tail-seq-scripts/plot_t_signals.py -f $(outdir)/normalized_t_signal.txt -o $(outdir)/signals.pdf -b 100 -l 250

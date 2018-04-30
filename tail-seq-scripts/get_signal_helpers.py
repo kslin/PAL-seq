@@ -24,9 +24,10 @@ def get_normalized_intensities(intensities, read1_sequence):
     """Use average intensities for the nucleotides in read1 to normalize the signals for read2.
 
     Arguments:
-        intensities - numpy array of shape (config.LEN1 + config.LEN2) x (number of nucleotides i.e. 4)
-        read1_sequence - string sequence of read1
+        intensities: numpy array of shape (config.LEN1 + config.LEN2) x (number of nucleotides i.e. 4)
+        read1_sequence: string sequence of read1
     """
+
     # skip the number of starting nucleotides specified in the config file
     try:
         intensities = intensities[config.NUM_SKIP:,:]
@@ -99,6 +100,7 @@ def impute(signal, nanlimit):
     Given the signal as an array, impute up to nanlimit rows of missing data.
     If there are more than nanlimit, return None.
     """
+
     # find all the rows with all zeros
     zero_rows = (signal == [0,0,0,0]).all(axis=1)
     zero_rows = np.nonzero(zero_rows)[0]
@@ -134,6 +136,7 @@ def get_batch_t_signal(params):
     Calculate normalized t-signals for a batch of sequences.
     Return t-signal values as one long string to be written to a file.
     """
+
     write_str = ''
     skipped = []
 
@@ -150,13 +153,13 @@ def get_batch_t_signal(params):
             continue
 
         # calculate normalization
-        normed_signal = get_normalized_intensities(signal, read1, config.LEN1, config.LEN2)
+        normed_signal = get_normalized_intensities(signal, read1)
 
         # normalize t-signal and return the output as a string
         if normed_signal is not None:
             t_signal = get_t_signal(normed_signal)
-            write_str += '{}\t{}\t{}\t{}\n'.format(read_ID, str(start),
-                                                  '\t'.join(['{:.3}'.format(x) for x in t_signal]))
+            write_str += '{}\t{}\t{}\n'.format(read_ID, str(start),
+                                                  '\t'.join(['{:.3f}'.format(x) for x in t_signal]))
 
         else:
             skipped.append(read_ID)
@@ -164,6 +167,15 @@ def get_batch_t_signal(params):
     return skipped, write_str
 
 def calculate_intensities(intensity_file, keep_dict, outdir, num_processes):
+    """Iterate through intensity file, extract values for mapping reads, calculate normalized T-signal.
+    Writes intensities to file.
+
+    Arguments:
+        intensity_file: path to gzipped intensity file
+        keep_dict: dictionary of read IDs to sequences
+        outdir: directory for output files
+        num_processes: number of processes
+    """
 
     # keep track of how many reads we skip due having too many 0's
     skipped = []
@@ -183,12 +195,15 @@ def calculate_intensities(intensity_file, keep_dict, outdir, num_processes):
     ix = 0
 
     # read intensity file and check if it's in keep_dict
-    with gzip.open(intensity_file, 'r') as infile:
+    t0 = time.time()
+    line_num = 0
+    with gzip.open(intensity_file, 'rt') as infile:
         while True:
             line = infile.readline()
-            if len(line) == 0:
+            if line == '':
                 break
 
+            line = line.split()
             read_ID = config.intensity_line_to_ID(line)
             try:
                 seq, tail_start = keep_dict[read_ID]
@@ -199,11 +214,14 @@ def calculate_intensities(intensity_file, keep_dict, outdir, num_processes):
                 IDs.append(read_ID)
                 read1s.append(seq)
                 starts.append(tail_start)
-                intensity_values[ix, :] = line.split()[config.SIGNAL_COL_START: config.SIGNAL_COL_END]
+                intensity_values[ix, :] = line[config.SIGNAL_COL_START: config.SIGNAL_COL_END]
                 ix += 1
 
                 if ix == config.CHUNKSIZE:
                     chunk = (IDs, read1s, starts, intensity_values)
+                    IDs, read1s, starts = [], [], []
+                    intensity_values = np.zeros((config.CHUNKSIZE, config.SIGNAL_COL_END - config.SIGNAL_COL_START))
+                    ix = 0
 
                     # if indicated, run parallel version
                     if num_processes > 1:
@@ -218,11 +236,11 @@ def calculate_intensities(intensity_file, keep_dict, outdir, num_processes):
                                 results = executor.map(get_batch_t_signal, chunks)
 
                                 # record how many signals were skipped and write results to a file
-                                for sk, wrstr in results:
+                                for sk, write_str in results:
                                     time.sleep(0.0001)
                                     skipped += sk
-                                    num_reads_kept += wrstr.count('\n')
-                                    full_write_str += wrstr
+                                    num_reads_kept += write_str.count('\n')
+                                    full_write_str += write_str
 
                             outfile.write(full_write_str)
 
@@ -232,16 +250,12 @@ def calculate_intensities(intensity_file, keep_dict, outdir, num_processes):
                     # otherwise run sequentially
                     else:
                         # calculate t-signal
-                        sk, writestr = get_batch_t_signal(chunk)
+                        sk, write_str = get_batch_t_signal(chunk)
 
                         # write to file
                         skipped += sk
-                        num_reads_kept += wrstr.count('\n')
-                        outfile.write(writestr)
-
-                    IDs, read1s, starts = [], [], []
-                    intensity_values = np.zeros((config.CHUNKSIZE, len(config.SIGNAL_COLUMNS)))
-                    ix = 0
+                        num_reads_kept += write_str.count('\n')
+                        outfile.write(write_str)                 
 
     # calculate t-signals for the last chunks
     if num_processes > 1:
@@ -252,21 +266,21 @@ def calculate_intensities(intensity_file, keep_dict, outdir, num_processes):
         if len(chunks) > 0:
             with concurrent.futures.ProcessPoolExecutor() as executor:
                 results = executor.map(get_batch_t_signal, chunks)
-                for sk, wrstr in results:
+                for sk, write_str in results:
                     skipped += sk
-                    num_reads_kept += wrstr.count('\n')
-                    outfile.write(wrstr)
+                    num_reads_kept += write_str.count('\n')
+                    outfile.write(write_str)
     else:
         if ix > 0:
             chunk = (IDs, read1s, starts, intensity_values[:ix, :])
 
             # calculate t-signal
-            sk, writestr = get_batch_t_signal(chunk)
+            sk, write_str = get_batch_t_signal(chunk)
 
             # write to file
             skipped += sk
-            num_reads_kept += wrstr.count('\n')
-            outfile.write(writestr)
+            num_reads_kept += write_str.count('\n')
+            outfile.write(write_str)
 
     return skipped, num_reads_kept
 

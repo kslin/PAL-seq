@@ -1,13 +1,27 @@
 import gzip
-import regex
 
 import numpy as np
 import pandas as pd
+import regex
 
 import config
 
 
+def reverse_complement(seq):
+    """Get reverse complement of sequence"""
+    nt_dict = {'A':'T', 'T': 'A', 'C': 'G', 'G':'C', 'N': 'N'}
+    return ''.join([nt_dict[nt] for nt in seq][::-1])
+
+
 def dedup_bed(bedfile):
+    """Deduplicate intersectBed results.
+    If a read maps to multiple genes, discard.
+    If a read maps to multiple exons of a gene, use later exon.
+    Extract 3' end of read. Note that reads are reverse complement of genes.
+
+    Arguments:
+        bedfile: pandas DataFrame of intersectBed columns [chr, start, end, read_ID, strand, gene]
+    """
 
     # split into plus and minus strand reads and sort each by 3' end
     columns = ['chr','3p_end','read_ID','strand','gene']
@@ -34,19 +48,26 @@ def dedup_bed(bedfile):
 
 
 def parse_read1(fastq1, keep_dict, standard_dict):
+    """Parse fastq1 file, extract reads that match standard sequences.
+
+    Arguments:
+        fastq1: path to gzipped fastq file for read1
+        keep_dict: dictionary of {read_ID: None} for reads that pass filters so far
+        standard_dict: dictionary of standard sequences
+    """
     new_keep_dict = {}
     standard_reads = []
-    with gzip.open(fastq1, 'r') as infile:
+    with gzip.open(fastq1, 'rt') as infile:
         while True:
             line1 = infile.readline()
-            if len(line1) == 0:
+            if line1 == '':
                 break
 
             if line1[0] != '@':
                 raise ValueError('fastq file entries must start with @')
 
-            read_ID = config.fastq_header_to_ID(line1[1:])
-            seq = infile.readline().replace('\n','')
+            read_ID = config.fastq_header_to_ID(line1[1:]) # exclude leading @
+            seq = infile.readline()[:-1] # exclude newline character
             _ = infile.readline()
             _ = infile.readline()
 
@@ -73,13 +94,21 @@ def parse_read1(fastq1, keep_dict, standard_dict):
 
 
 def parse_read2(fastq2, keep_dict, short_tail_outfile_path):
+    """Parse fastq2 file, filter low quality or very short tails.
+    Manually call tails between 4 and 9 nucleotides (inclusive).
+
+    Arguments:
+        fastq2: path to gzipped fastq file for read1
+        keep_dict: dictionary of {read_ID: read1 sequence} for reads that pass filters so far
+        short_tail_outfile_path: path to output file for manually-called short tails
+    """
     new_keep_dict = {}
     short_tail_outfile = open(short_tail_outfile_path, 'w')
     dropped_read2 = []
-    with gzip.open(fastq2, 'r') as infile:
+    with gzip.open(fastq2, 'rt') as infile:
         while True:
             line1 = infile.readline()
-            if len(line1) == 0:
+            if line1 == '':
                 break
 
             if line1[0] != '@':

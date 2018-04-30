@@ -4,14 +4,13 @@ def fastq_header_to_ID(line):
   """
   Convert fastq header to read ID
   """
-  return line.split('/')[0].replace('WIGTC-HISEQ:2:','')
+  return line.split('#')[0].replace('WIGTC-HISEQ:2:','')
 
 def intensity_line_to_ID(line):
   """
   Extract read ID from intensity line
   """
-  read_ID = line.split()[:4]
-  read_ID = '{}:{}:{}#{}'.format(read_ID[0], read_ID[1], read_ID[2], read_ID[3])
+  read_ID = '{}:{}:{}'.format(line[0], line[1], line[2])
   return read_ID
 
 ### data configurations ###
