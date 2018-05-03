@@ -1,3 +1,6 @@
+import matplotlib
+matplotlib.use('Agg')
+
 from optparse import OptionParser
 import os
 
