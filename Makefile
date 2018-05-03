@@ -2,7 +2,7 @@ fastq1="/lab/solexa_public/Bartel/171211_WIGTC-HISEQA_HVL3JBCXY/QualityScore/TAG
 fastq2="/lab/solexa_public/Bartel/171211_WIGTC-HISEQA_HVL3JBCXY/QualityScore/TAGTGC-s_2_2_sequence.txt.tar.gz"
 genomeDir="/lab/solexa_bartel/teisen/RNAseq/indices/STAR_mm10/"
 gff="/lab/solexa_bartel/eichhorn/5EU_RPF/miR-1_miR-155_timecourse_tail_analysis/Annotations/mm10_tpUTR.gff"
-outdir="/lab/bartel4_ata/kathyl/Tail_Seq/testing_outputs"
+outdir="/lab/bartel4_ata/kathyl/Tail_Seq/final_outputs"
 intensity="/archive/bartel/2017.12.29-18701/solexa_bartel/tail-seq/171211_WIGTC-HISEQA_0778_HVL3JBCXY/TAGTGC-s_2_hits.txt.gz"
 standard_file="/lab/bartel4_ata/kathyl/Tail_Seq/tail-seq/tail-seq-scripts/standard_sequences.txt"
 

@@ -234,7 +234,7 @@ def calculate_intensities(intensity_file, keep_dict, outdir, num_processes):
 
     with gzip.open(intensity_file, 'rt') as infile:
         for line in infile:
-            line = line.decode().split()
+            line = line.split()
             line_num += 1
             read_ID = config.intensity_line_to_ID(line)
 
