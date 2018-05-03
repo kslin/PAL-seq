@@ -146,5 +146,5 @@ def parse_read2(fastq2, keep_dict, short_tail_outfile_path):
 
             line_counter = (line_counter + 1) % 4
 
+    short_tail_outfile.close()
     return new_keep_dict, dropped_read2, num_short_tails
-

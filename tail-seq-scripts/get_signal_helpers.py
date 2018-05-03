@@ -74,6 +74,7 @@ def get_normalized_intensities(intensities, read1_sequence):
 
     return read2_intensities_normed
 
+
 def get_t_signal(intensities):
     """Divide T intensity by the sum of the other intensities to get the t-signal"""
 
@@ -167,39 +168,6 @@ def get_batch_t_signal(params):
             skipped.append(read_ID)
     
     return skipped, write_str
-
-
-# def get_single_t_signal(params):
-#     """
-#     Calculate normalized t-signals for a one sequence.
-#     Return t-signal values as one long string to be written to a file.
-#     """
-
-#     read_ID, read1, start, signal = params
-
-#     signal = np.array(signal).reshape((config.LEN1+config.LEN2, 4)).astype(float)
-
-#     # impute missing data
-#     signal = impute(signal, config.NAN_LIMIT)
-
-#     # skip if too much missing data
-#     if signal is None:
-#         return True, read_ID
-
-#     # calculate normalization
-#     normed_signal = get_normalized_intensities(signal, read1)
-
-#     # normalize t-signal and return the output as a string
-#     if normed_signal is not None:
-#         t_signal = get_t_signal(normed_signal)
-#         write_str = '{}\t{}\t{}\n'.format(read_ID, str(start),
-#                                               '\t'.join(['{:.3f}'.format(x) for x in t_signal]))
-
-#         return False, write_str
-
-#     else:
-#         return True, read_ID, ''
-
 
 
 def calculate_intensities(intensity_file, keep_dict, outdir, num_processes):
@@ -313,6 +281,7 @@ def calculate_intensities(intensity_file, keep_dict, outdir, num_processes):
             num_reads_kept += write_str.count('\n')
             outfile.write(write_str)
 
+    outfile.close()
     return skipped, num_reads_kept
 
 
