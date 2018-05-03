@@ -1,3 +1,4 @@
+import datetime
 from optparse import OptionParser
 import os
 import pickle
@@ -29,7 +30,10 @@ if __name__ == '__main__':
     if not os.path.exists(options.OUTDIR):
         os.makedirs(options.OUTDIR)
 
-    print('Deduplicating BED file and extracting 3` ends...')
+    # start writing log file
+    logfile = open(os.path.join(options.OUTDIR, 'logfile.txt'), 'w')
+
+    # start timing
     t0 = time.time()
 
     # dedup bed input and write dropped reads
@@ -41,16 +45,14 @@ if __name__ == '__main__':
     dropped_reads_outfile = open(options.DROPPED, 'w')
     dropped_reads_outfile.write('read_ID\treason\n')
     for r in dropped_reads:
-        dropped_reads_outfile.write('{}\tmulti_gene_map\n'.format(r))
+        dropped_reads_outfile.write('{}\tmulti_accession_map\n'.format(r))
 
     # make a dictionary for reads that will continue to HMM
     keep_dict = {x: None for x in reads_dedup['read_ID']}
 
-    print('{:.3f} seconds'.format(time.time() - t0))
-    print('Skipped due to mapping to multiple genes: {}'.format(len(dropped_reads)))
-    print('Reads moving forward: {}'.format(len(keep_dict)))
-
-    print('Excluding reads that fail to map and extracting standards...')
+    logfile.write('Time to dedup BED and extract 3` ends\t{}\n'.format(str(datetime.timedelta(seconds=int(time.time()-t0)))))
+    logfile.write('Skipped due to mapping to multiple accessions\t{}\n'.format(len(dropped_reads)))
+    logfile.write('Reads passing dedup filter\t{}\n'.format(len(keep_dict)))
     t0 = time.time()
 
     # read in standards
@@ -63,28 +65,25 @@ if __name__ == '__main__':
     # iterate through read1, separate standards, extract sequences
     keep_dict, standard_reads = preprocess_helpers.parse_read1(options.FASTQ1, keep_dict, standard_dict)
 
-    # write table of read_IDs, 3p ends, gene IDs
+    # write table of read_IDs, 3p ends, accession IDs
     all_reads = pd.concat([standard_reads, reads_dedup], axis=0).drop_duplicates(subset=['read_ID'], keep='first')
     all_reads.to_csv(os.path.join(options.OUTDIR, 'all_read_info.txt'), sep='\t', index=False)
 
-    print('{:.3f} seconds'.format(time.time() - t0))
-    print('Found {} reads from standards'.format(len(standard_reads)))
-    print('Reads moving forward: {}'.format(len(keep_dict)))
-
-    print('Calling short tails manually...')
+    logfile.write('Time to exclude reads that fail to map and extract standards\t{}\n'.format(str(datetime.timedelta(seconds=int(time.time()-t0)))))
+    logfile.write('Reads found from standards\t{}\n'.format(len(standard_reads)))
+    logfile.write('Reads passing mapping filter\t{}\n'.format(len(keep_dict)))
     t0 = time.time()
 
     # read in read2, separate short tails
-    keep_dict, dropped_read2 = preprocess_helpers.parse_read2(options.FASTQ2, keep_dict, options.SHORT_TAILS)
+    keep_dict, dropped_read2, num_short_tails = preprocess_helpers.parse_read2(options.FASTQ2, keep_dict, options.SHORT_TAILS)
 
     for read, reason in dropped_read2:
         dropped_reads_outfile.write('{}\t{}\n'.format(read, reason))
 
-    print('{:.3f} seconds'.format(time.time() - t0))
-    print('Skipped due to low quality read2: {}'.format(len(dropped_read2)))
-    print('Reads moving forward: {}'.format(len(keep_dict)))
-
-    print('Calculating normalized T-signal...')
+    logfile.write('Time to parse fastq2 and manually call short tails\t{}\n'.format(str(datetime.timedelta(seconds=int(time.time()-t0)))))
+    logfile.write('Number short tail reads called manually\t{}\n'.format(num_short_tails))
+    logfile.write('Skipped due to low quality read2:\t{}\n'.format(len(dropped_read2)))
+    logfile.write('Reads for calculating normalized T-signal\t{}\n'.format(len(keep_dict)))
     t0 = time.time()
     
 
@@ -95,31 +94,17 @@ if __name__ == '__main__':
 
 
     # pickle.dump(keep_dict, open(os.path.join(options.OUTDIR, 'keep_dict.pickle'), "w"))
-    # keep_dict = pickle.load(open(os.path.join(options.OUTDIR, 'keep_dict.pickle'), "r"))
-
-    # new_keep_dict = {}
-    # for key, val in keep_dict.items():
-    #     key1,key2,key3 = key.split('#')[0].split(':')
-    #     if key1 not in new_keep_dict:
-    #         new_keep_dict[key1] = {key2:{key3:val}}
-    #     else:
-    #         if key2 not in new_keep_dict[key1]:
-    #             new_keep_dict[key1][key2] = {key3:val}
-    #         else:
-    #             new_keep_dict[key1][key2][key3] = val
-
-    # print(len(new_keep_dict))
-
-    # pickle.dump(new_keep_dict, open(os.path.join(options.OUTDIR, 'new_keep_dict.pickle'), "w"))
-    # new_keep_dict = pickle.load(open(os.path.join(options.OUTDIR, 'new_keep_dict.pickle'), "r"))
+    # keep_dict = pickle.load(open(os.path.join(options.OUTDIR, 'keep_dict.pickle'), "rb"))   
 
     dropped_intensity, num_reads_kept = get_signal_helpers.calculate_intensities(options.INTENSITY, keep_dict, options.OUTDIR, options.FUTURES)
+    
+    logfile.write('Time to calculate normalized T-signal\t{}\n'.format(str(datetime.timedelta(seconds=int(time.time()-t0)))))
+    logfile.write('Skipped due to low quality intensity values\t{}\n'.format(len(dropped_intensity)))
+    logfile.write('Reads for HMM\t{}\n'.format(num_reads_kept))
 
-    print('{:.3f} seconds'.format(time.time() - t0))
-    print("Skipped due to low quality intensity values: {}".format(len(dropped_intensity)))
-    print('Reads moving forward: {}'.format(num_reads_kept))
     for r in dropped_intensity:
         dropped_reads_outfile.write('{}\tlow_qual_intensity_vals\n'.format(r))
 
-    # close dropped reads file
+    # close outfiles
     dropped_reads_outfile.close()
+    logfile.close()

@@ -10,7 +10,8 @@ def intensity_line_to_ID(line):
   """
   Extract read ID from intensity line
   """
-  read_ID = '{}:{}:{}'.format(line[0], line[1], line[2])
+  read_ID = ':'.join(line[:3])
+  # read_ID = '{}:{}:{}#{}'.format(line[0], line[1], line[2], line[3])
   return read_ID
 
 ### data configurations ###
@@ -26,39 +27,53 @@ NUC_ORDER = ['A','C','G','T']
 
 UPPERBOUND, LOWERBOUND = 5, -5
 
-CHUNKSIZE = 5000
+CHUNKSIZE = 1000
 
 NAN_LIMIT = 5
 
 WINDOW_SIZE, CUTOFF = 40, -20
 
-START_SIGNAL = 10000000000.0
+START_SIGNAL = 100.0
+
+TRAIN_SIZE = 10000
+MAX_ITER = 10000
+TOL = 0.01
 
 HMM_PARAMS_3STATE = {
-                        "TRANSITIONMATRIX": [[0.94, 0.03, 0.01, 0.01, 0.01],
-                                             [0.0, 0.5, 0.4, 0.08, 0.02],
-                                             [0.0, 0.0, 0.6, 0.38, 0.02],
-                                             [0.0, 0.0, 0.0, 0.95, 0.05],
-                                             [0.95, 0.01, 0.01, 0.03, 0.0]],
 
-                        "EMISSIONMATRIX": [[[1.5, 0.0], [1.5, 1.5], [0.95, 0.05]],
-                                           [[1.5, -1.0], [1.5, 1.5], [0.75, 0.25]],
-                                           [[1.5, -1.0], [1.5, 1.5], [0.5, 0.5]],
-                                           [[1.5, -1.0], [1.5, 1.5], [0.25, 0.75]],
-                                           [[START_SIGNAL, 0.0], [1.0, 1.0], [1.0, 0.0]]],
+                        "TRANSITION_INIT": np.array([[0.95, 0.03, 0.019, 0.001],
+                                                     [0.001, 0.749, 0.249, 0.001],
+                                                     [0.001, 0.001, 0.997, 0.001],
+                                                     [0.95, 0.025, 0.0249, 0.001]]),
 
-                        "PI": [0.01, 0.01, 0.01, 0.01, 0.96]
+                        "MEANS_INIT": np.array([[1.0], [0.0], [-1.0], [START_SIGNAL]]),
+
+                        "VARS_INIT": np.array([[0.25], [0.25], [1.0], [1.0]]),
+
+                        "START_PROB_INIT": np.array([0.001, 0.001, 0.001, 0.997])
                       }
 
 
 HMM_PARAMS_2STATE = {
-                      "TRANSITIONMATRIX": [[0.95,0.05,0.0],
-                                           [0.0,1.0,0.0],
-                                           [0.95,0.05,0.0]],
+                        "TRANSITION_INIT": np.array([[0.95, 0.049, 0.001],
+                                                    [0.001, 0.998, 0.001],
+                                                    [0.95, 0.049, 0.001]]),
 
-                      "EMISSIONMATRIX": [[1.0,0.5],
-                                         [-1.0,0.5],
-                                         [10000000000.0,1.0]],
+                        "MEANS_INIT": np.array([[1.0], [-1.0], [START_SIGNAL]]),
 
-                      "PI": [0.0, 0.0, 1.0]
+                        "VARS_INIT": np.array([[0.25], [0.25], [1.0]]),
+
+                        "START_PROB_INIT": np.array([0.001, 0.001, 0.998])
                       }
+
+# HMM_PARAMS_2STATE = {
+#                         "TRANSITION_INIT": np.array([[0.95, 0.05, 0.0],
+#                                                     [0.0, 1.0, 0.0],
+#                                                     [0.95, 0.05, 0.0]]),
+
+#                         "MEANS_INIT": np.array([[1.0], [-1.0], [START_SIGNAL]]),
+
+#                         "VARS_INIT": np.array([[0.25], [0.25], [1.0]]),
+
+#                         "START_PROB_INIT": np.array([0.0, 0.0, 1.0])
+#                       }

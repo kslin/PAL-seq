@@ -1,4 +1,5 @@
 import concurrent.futures
+import io
 import gzip
 import os
 import time
@@ -128,7 +129,7 @@ def impute(signal, nanlimit):
         for i, row in enumerate(zero_rows):
             signal[row, :] = new_rows[i]
 
-        return signal.astype(int)
+        return signal#.astype(int)
 
 
 def get_batch_t_signal(params):
@@ -142,6 +143,7 @@ def get_batch_t_signal(params):
 
     # iterate through signals in the batch
     for (read_ID, read1, start, signal) in zip(*params):
+
         signal = signal.reshape((config.LEN1+config.LEN2, 4))
 
         # impute missing data
@@ -165,6 +167,40 @@ def get_batch_t_signal(params):
             skipped.append(read_ID)
     
     return skipped, write_str
+
+
+# def get_single_t_signal(params):
+#     """
+#     Calculate normalized t-signals for a one sequence.
+#     Return t-signal values as one long string to be written to a file.
+#     """
+
+#     read_ID, read1, start, signal = params
+
+#     signal = np.array(signal).reshape((config.LEN1+config.LEN2, 4)).astype(float)
+
+#     # impute missing data
+#     signal = impute(signal, config.NAN_LIMIT)
+
+#     # skip if too much missing data
+#     if signal is None:
+#         return True, read_ID
+
+#     # calculate normalization
+#     normed_signal = get_normalized_intensities(signal, read1)
+
+#     # normalize t-signal and return the output as a string
+#     if normed_signal is not None:
+#         t_signal = get_t_signal(normed_signal)
+#         write_str = '{}\t{}\t{}\n'.format(read_ID, str(start),
+#                                               '\t'.join(['{:.3f}'.format(x) for x in t_signal]))
+
+#         return False, write_str
+
+#     else:
+#         return True, read_ID, ''
+
+
 
 def calculate_intensities(intensity_file, keep_dict, outdir, num_processes):
     """Iterate through intensity file, extract values for mapping reads, calculate normalized T-signal.
@@ -190,77 +226,72 @@ def calculate_intensities(intensity_file, keep_dict, outdir, num_processes):
     else:
         print("Running non-parallel version")
 
-    IDs, read1s, starts = [], [], []
-    intensity_values = np.zeros((config.CHUNKSIZE, config.SIGNAL_COL_END - config.SIGNAL_COL_START))
-    ix = 0
 
     # read intensity file and check if it's in keep_dict
-    t0 = time.time()
+    IDs, read1s, starts, intensity_values = [], [], [], []
+    ix = 0
     line_num = 0
-    with gzip.open(intensity_file, 'rt') as infile:
-        while True:
-            line = infile.readline()
-            if line == '':
-                break
 
-            line = line.split()
+    with gzip.open(intensity_file, 'rt') as infile:
+        for line in infile:
+            line = line.decode().split()
+            line_num += 1
             read_ID = config.intensity_line_to_ID(line)
+
             try:
                 seq, tail_start = keep_dict[read_ID]
+                
             except:
                 continue
 
-            if (seq is not None) and (tail_start is not None):
-                IDs.append(read_ID)
-                read1s.append(seq)
-                starts.append(tail_start)
-                intensity_values[ix, :] = line[config.SIGNAL_COL_START: config.SIGNAL_COL_END]
-                ix += 1
+            IDs.append(read_ID)
+            read1s.append(seq)
+            starts.append(tail_start)
+            intensity_values.append(line[config.SIGNAL_COL_START: config.SIGNAL_COL_END])
+            ix += 1
 
-                if ix == config.CHUNKSIZE:
-                    chunk = (IDs, read1s, starts, intensity_values)
-                    IDs, read1s, starts = [], [], []
-                    intensity_values = np.zeros((config.CHUNKSIZE, config.SIGNAL_COL_END - config.SIGNAL_COL_START))
-                    ix = 0
+            if ix == config.CHUNKSIZE:
+                chunk = (IDs, read1s, starts, np.array(intensity_values, dtype=int))
+                IDs, read1s, starts, intensity_values = [], [], [], []
+                ix = 0
 
-                    # if indicated, run parallel version
-                    if num_processes > 1:
-     
-                        chunks.append(chunk)
+                # if indicated, run parallel version
+                if num_processes > 1:
+                    chunks.append(chunk)
 
-                        # once we've read enough chunks, calculate t-signals in parallel
-                        if len(chunks) == num_processes:
-                            t0 = time.time()
-                            full_write_str = ''
-                            with concurrent.futures.ProcessPoolExecutor() as executor:
-                                results = executor.map(get_batch_t_signal, chunks)
+                    # once we've read enough chunks, calculate t-signals in parallel
+                    if len(chunks) == num_processes:
+                        full_write_str = ''
+                        with concurrent.futures.ProcessPoolExecutor() as executor:
+                            results = executor.map(get_batch_t_signal, chunks)
 
-                                # record how many signals were skipped and write results to a file
-                                for sk, write_str in results:
-                                    time.sleep(0.0001)
-                                    skipped += sk
-                                    num_reads_kept += write_str.count('\n')
-                                    full_write_str += write_str
+                            # record how many signals were skipped and write results to a file
+                            for sk, write_str in results:
+                                time.sleep(0.0001)
+                                skipped += sk
+                                num_reads_kept += write_str.count('\n')
+                                full_write_str += write_str
 
-                            outfile.write(full_write_str)
+                        outfile.write(full_write_str)
 
-                            full_write_str = ''
-                            chunks = []
+                        full_write_str = ''
+                        chunks = []
 
-                    # otherwise run sequentially
-                    else:
-                        # calculate t-signal
-                        sk, write_str = get_batch_t_signal(chunk)
+                # otherwise run sequentially
+                else:
+                    # calculate t-signal
+                    sk, write_str = get_batch_t_signal(chunk)
 
-                        # write to file
-                        skipped += sk
-                        num_reads_kept += write_str.count('\n')
-                        outfile.write(write_str)                 
+                    # write to file
+                    skipped += sk
+                    num_reads_kept += write_str.count('\n')
+                    outfile.write(write_str)
+
 
     # calculate t-signals for the last chunks
     if num_processes > 1:
         if ix > 0:
-            chunk = (IDs, read1s, starts, intensity_values[:ix, :])
+            chunk = (IDs, read1s, starts, np.array(intensity_values, dtype=int))
             chunks.append(chunk)
 
         if len(chunks) > 0:
@@ -272,7 +303,7 @@ def calculate_intensities(intensity_file, keep_dict, outdir, num_processes):
                     outfile.write(write_str)
     else:
         if ix > 0:
-            chunk = (IDs, read1s, starts, intensity_values[:ix, :])
+            chunk = (IDs, read1s, starts, np.array(intensity_values, dtype=int))
 
             # calculate t-signal
             sk, write_str = get_batch_t_signal(chunk)

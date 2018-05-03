@@ -3,13 +3,14 @@ from optparse import OptionParser
 import os
 import sys
 import time
+import warnings
 
-import ghmm
+from hmmlearn import hmm
 import numpy as np
 import pandas as pd
 
 import config
-import helpers
+import tail_length_helpers
 
 
 if __name__ == '__main__':
@@ -17,10 +18,7 @@ if __name__ == '__main__':
     parser = OptionParser()
     parser.add_option("-s", dest="SIGNAL", help="signal file output from get_signal.py")
     parser.add_option("-o", "--outdir", dest="OUTDIR", help="output directory")
-    parser.add_option("--twostate", action="store_true", dest="TWOSTATE", default=False, help="toggle for 2-state model")
-    parser.add_option("-t", dest="TRAIN_SIZE", type="int", default=10000, help="size of training set")
-    parser.add_option("-m", dest="MAXITER", type="int", default=10000, help="maximum number of iterations")
-    parser.add_option("--tol", dest="TOL", type="float", default=0.01, help="tolerance for EM algorithm")
+    parser.add_option("--twostate", action="store_true", dest="TWOSTATE", default=True, help="toggle for 2-state model")
     parser.add_option("-f", "--futures", dest="FUTURES", type="int", default=1, help="number of threads to use")
 
     (options, args) = parser.parse_args()
@@ -31,15 +29,16 @@ if __name__ == '__main__':
     print("Writing tail-length outputs to {}".format(options.OUTDIR))
 
     # find how long the signal file is
-    file_length = 0
-    with open(options.SIGNAL,'r') as f:
-        for line in f:
-            file_length += 1
+    logfile = pd.read_csv(os.path.join(options.OUTDIR, 'logfile.txt'), sep='\t', header=None, index_col=0)
+    file_length = int(logfile.loc['Reads for HMM'][1])
 
     # quit if file too small
-    if file_length < options.TRAIN_SIZE:
+    if file_length < config.TRAIN_SIZE:
         print("The training size must be larger than the input file size")
         sys.exit()
+
+    warnings.filterwarnings("ignore", category=DeprecationWarning)
+    warnings.filterwarnings("ignore", category=RuntimeWarning)
 
     # if the output directory doesn't exist, quit
     if not os.path.exists(options.OUTDIR):
@@ -47,126 +46,157 @@ if __name__ == '__main__':
         sys.exit()
 
     ### get training set ###
-    print("Reading in training set")
+    t0 = time.time()
 
-    # generate which rows to skip when reading in data
-    np.random.seed(0)
-    skip_ix = np.sort(np.random.choice(range(file_length), size=(file_length - options.TRAIN_SIZE), replace=False))
+    # collect random rows to train
+    training_values, training_seq_lengths = tail_length_helpers.read_training_set(options.SIGNAL, file_length, config.TRAIN_SIZE, random_seed=0)
 
-    # read in data, skipping all rows except the training rows
-    t_signals_train = pd.read_csv(options.SIGNAL, sep='\t', skiprows=skip_ix)#.set_index('ID')
-    t_signals_train.columns = ['ID','Tail_start'] + [str(i) for i in range(config.LEN2)]
-    t_signals_train = t_signals_train.set_index('ID')
-
-    # read in signal data from get_signal.py
-    starts = t_signals_train['Tail_start'].values
-    t_signals_train = t_signals_train.drop(['Tail_start'], 1)
-    seq_ids = np.array(t_signals_train.index)
-    t_signals_train = t_signals_train.values.tolist()
-
-    # truncate signal to where the T's start and add the starting state value
-    t_signals_train = [[config.START_SIGNAL] + x[s:] for (x,s) in zip(t_signals_train, starts)]
-
-    print("Training HMM")
+    print('{:.3f} seconds'.format(time.time() - t0))
+    print("Training HMM...")
+    t0 = time.time()
 
     # create HMM model
-    F = ghmm.Float()
-
     if options.TWOSTATE:
         params = config.HMM_PARAMS_2STATE
+        MODEL = hmm.GaussianHMM(n_components=3, init_params="", n_iter=config.MAX_ITER, tol=config.TOL)
+        
     else:
         params = config.HMM_PARAMS_3STATE
+        MODEL = hmm.GaussianHMM(n_components=4, init_params="", n_iter=config.MAX_ITER, tol=config.TOL)
 
-    MODEL = ghmm.HMMFromMatrices(F, ghmm.GaussianMixtureDistribution(F),
-                                     params["TRANSITIONMATRIX"], params["EMISSIONMATRIX"], params["PI"])
-
-
-    trainingset = ghmm.SequenceSet(F, t_signals_train)
+    MODEL.startprob_ = params['START_PROB_INIT']
+    MODEL.transmat_ = params['TRANSITION_INIT']
+    MODEL.means_ = params['MEANS_INIT']
+    MODEL.covars_ = params['VARS_INIT']
 
     # train model
-    MODEL.baumWelch(trainingset, options.MAXITER, options.TOL)
+    MODEL.fit(training_values, lengths=training_seq_lengths)
+    print(MODEL.monitor_)
+    print(MODEL.startprob_, MODEL.transmat_, MODEL.means_, MODEL.covars_)
 
-    def get_batch_tail_length(chunk):
+    print('{:.3f} seconds'.format(time.time() - t0))
+    print("Calculating tail-lengths...")
+    t0 = time.time()
+
+    # define function that calculates tail length
+    def get_batch_tail_length(lines):
         """
         Given a chunk of a signal file, use the model to calculate tail lengths
-        and return the results as a data frame
         """
         # extract metadata
-        ids = list(chunk[0])
-        genes = list(chunk[1])
-        starts = list(chunk[2])
+        ids, signals, lengths = [], [], []
 
         # extract signal
-        signals = chunk[np.arange(3, options.LEN + 3)].values.tolist()
-        signals = [[config.START_SIGNAL] + x[s:] for (x,s) in zip(signals, starts)]
-        signals = ghmm.SequenceSet(F, signals)
-        emissions = MODEL.viterbi(signals)[0]
+        for line in lines:
+            line = line[:-1].split('\t') # remove newline character and split by tab
+            ids.append(line[0])
+            tail_start = int(line[1])
+            signals.append([config.START_SIGNAL])
+            for val in line[2 + tail_start:]:
+                signals.append([float(val)])
 
-        # get tail lengths from HMM emissions
-        tail_lengths = [helpers.get_tail_length_from_emissions(x) for x in emissions]
-        tail_length_df = pd.DataFrame({'ID': ids, 'Gene_name': genes, 'Start': starts, 'Tail_length': tail_lengths})
+            lengths.append(config.LEN2 - tail_start + 1)
 
-        return tail_length_df
+        # predict states
+        signals = np.array(signals)
+        emissions = MODEL.predict(signals, lengths=lengths)
 
-    print("Calculating tail-lengths")
+        # get tail lengths from emissions
+        tail_lengths = []
+        start_ix = 0
+        for length in lengths:
+            single_emission = emissions[start_ix: start_ix + length]
+            tail_lengths.append(tail_length_helpers.get_tail_length_from_emissions(single_emission, options.TWOSTATE))
+            start_ix += length
 
-    # create dataframe to store tail length information
-    tail_length_df = pd.DataFrame({'ID':[], 'Gene_name': [], 'Start': [], 'Tail_length': []})
+        return ids, tail_lengths
 
     # read in signals as chunks and calculate viterbi emissions
     chunk_iterator = pd.read_csv(options.SIGNAL, sep='\t', header=None, iterator=True, chunksize=10000)
     finished = 0
+    all_ids, all_tls = [], []
 
     # if indicated, run parallel version
     if options.FUTURES > 1:
         print("Running parallel version")
+    else:
+        print("Running non-parallel version")
 
-        chunks = []
-        t0 = time.time()
+    ix = 0
+    chunks = []
+    chunk = []
+    with open(options.SIGNAL, 'r') as infile:
+        for line in infile:
 
-        for chunk in chunk_iterator:
+            # add lines to the chunk
+            chunk.append(line)
+            ix += 1
+            finished += 1
+
+            # when we've collected a chunk, calculate the tail lengths
+            if ix == config.CHUNKSIZE:
+
+                # if indicated, run in parallel
+                if options.FUTURES > 1:
+                    chunks.append(chunk)
+                    if len(chunks) == options.FUTURES:
+                        with concurrent.futures.ProcessPoolExecutor() as executor:
+                            results = executor.map(get_batch_tail_length, chunks)
+
+                            # add results to the dataframe
+                            for ids, tls in results:
+                                all_ids += ids
+                                all_tls += tls
+                                time.sleep(0.0001)
+
+                        chunks = []
+
+                # otherwise, run sequentially
+                else:
+                    ids, tls = get_batch_tail_length(chunk)
+                    all_ids += ids
+                    all_tls += tls
+                    break
+
+                ix = 0
+                chunk = []
+
+    # process last batch
+    if options.FUTURES > 1:
+        if len(chunk) > 0:
             chunks.append(chunk)
-            finished += len(chunk)
 
-            if len(chunks) == options.FUTURES:
-                with concurrent.futures.ProcessPoolExecutor() as executor:
-                    results = executor.map(get_batch_tail_length, chunks)
-
-                    # add results to the dataframe
-                    for temp in results:
-                        tail_length_df = pd.concat([tail_length_df, temp])
-                        time.sleep(0.0001)
-
-                print('Calculated {} out of {}, ({:.2} sec)'.format(finished, file_length, time.time()-t0))
-                t0 = time.time()
-
-                chunks = []
-
-        # process last batch
         if len(chunks) > 0:
             with concurrent.futures.ProcessPoolExecutor() as executor:
                 results = executor.map(get_batch_tail_length, chunks)
 
                 # add results to the dataframe
-                for temp in results:
-                    tail_length_df = pd.concat([tail_length_df, temp])
+                for ids, tls in results:
+                    all_ids += ids
+                    all_tls += tls
                     time.sleep(0.0001)
-
-    # otherwise, run sequentially
     else:
-        print("Running non-parallel version")
-        
-        for chunk in chunk_iterator:
-            temp = get_batch_tail_length(chunk)
-            tail_length_df = pd.concat([tail_length_df, temp])
+        if len(chunk) > 0:
+            ids, tls = get_batch_tail_length(chunk)
+            all_ids += ids
+            all_tls += tls
 
-            finished += len(chunk)
-            print('Calculated {} out of {}'.format(finished, file_length))
+
+    # creat DataFrame of tail length values
+    tail_length_df = pd.DataFrame({'read_ID': all_ids, 'tail_length': all_tls, 'method': 'HMM'}).set_index('read_ID')
+
+    print(len(tail_length_df))
+
+    # read in short tails and append
+    short_tails = pd.read_csv(os.path.join(options.OUTDIR, 'short_tails.txt'), sep='\t', index_col='read_ID')
+    short_tails['method'] = 'manual_call'
+    tail_length_df = pd.concat([tail_length_df, short_tails])
+
+    # import and merge with other information
+    other_info = pd.read_csv(os.path.join(options.OUTDIR, 'all_read_info.txt'), sep='\t', index_col='read_ID')
+    merged = pd.concat([tail_length_df, other_info], axis=1, join='inner')
+
+    print(len(tail_length_df), len(merged))
 
     # write tail lengths to a file
-    tail_length_df.to_csv(os.path.join(options.OUTDIR, 'tail_lengths.txt'), sep='\t', index=False)
-
-    # get median tail lengths and write to a separate file
-    tail_length_df['Num tags'] = [1]*len(tail_length_df)
-    tail_length_df = tail_length_df.groupby('Gene_name').agg({'Tail_length': [np.median, np.mean], 'Num tags': len})
-    tail_length_df.to_csv(os.path.join(options.OUTDIR, 'median_tail_lengths.txt'), sep='\t')
+    merged.to_csv(os.path.join(options.OUTDIR, 'tail_lengths.txt'), sep='\t')
