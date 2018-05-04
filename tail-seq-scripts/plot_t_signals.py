@@ -14,11 +14,16 @@ import config
 if __name__ == '__main__':
 
     parser = OptionParser()
-    parser.add_option("-s", dest="INFILE", help="t-signal file")
     parser.add_option("-o", dest="OUTDIR", help="plotting file")
     parser.add_option("-b", dest="BINS", type="int", default=100, help="num bins")
 
     (options, args) = parser.parse_args()
+
+    # if the necesary input file doesn't exist, quit
+    infile = os.path.join(options.OUTDIR, 'normalized_t_signal.txt')
+    if not os.path.exists(infile):
+        print("{} does not exist. Run get_signal_from_raw.py first with the same output directory.".format(infile))
+        sys.exit()
 
     # make an empty array for storing the densities
     densities = np.zeros((options.BINS-1, config.LEN2))
@@ -26,7 +31,7 @@ if __name__ == '__main__':
     # define the bins
     bin_boundaries = np.linspace(config.LOWERBOUND, config.UPPERBOUND, options.BINS)
 
-    data = pd.read_csv(options.INFILE, sep='\t', header=None)
+    data = pd.read_csv(infile, sep='\t', header=None)
 
     # for every t-signal, calculate its density in each bin and add to the array
     for i in range(config.LEN2):

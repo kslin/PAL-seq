@@ -1,4 +1,5 @@
 import gzip
+import os
 
 import numpy as np
 import pandas as pd
@@ -89,17 +90,17 @@ def parse_read1(fastq1, keep_dict, standard_dict):
     return new_keep_dict, standard_reads
 
 
-def parse_read2(fastq2, keep_dict, short_tail_outfile_path):
+def parse_read2(fastq2, keep_dict, outdir):
     """Parse fastq2 file, filter low quality or very short tails.
     Manually call tails between 4 and 9 nucleotides (inclusive).
 
     Arguments:
         fastq2: path to gzipped fastq file for read1
         keep_dict: dictionary of {read_ID: read1 sequence} for reads that pass filters so far
-        short_tail_outfile_path: path to output file for manually-called short tails
+        outdir: path to output directory
     """
     new_keep_dict = {}
-    short_tail_outfile = open(short_tail_outfile_path, 'w')
+    short_tail_outfile = open(os.path.join(outdir, 'short_tails.txt'), 'w')
     short_tail_outfile.write('read_ID\ttail_length\n')
     num_short_tails = 0
     dropped_read2 = []

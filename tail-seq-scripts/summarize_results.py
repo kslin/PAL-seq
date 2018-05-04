@@ -12,44 +12,32 @@ import config
 
 
 def get_cdf(vals):
+    ### Calculate CDF values for plotting###
     if len(vals) < 5:
         return [], []
 
     num_bins = int(len(vals)/5)
     counts, bin_edges = np.histogram(vals, bins=num_bins)
     counts = counts / float(sum(counts))
+
     return bin_edges[1:], np.cumsum(counts)
 
 
 if __name__ == '__main__':
 
     parser = OptionParser()
-    parser.add_option("-i", dest="INFILE", help="tail length file")
     parser.add_option("-o", dest="OUTDIR", help="plotting file")
 
     (options, args) = parser.parse_args()
 
-    # tails = pd.read_csv(options.INFILE, sep='\t', header=None)
+    # if the necesary input file doesn't exist, quit
+    infile = os.path.join(options.OUTDIR, 'tail_lengths.txt')
+    if not os.path.exists(infile):
+        print("{} does not exist. Run tail_length_hmm.py first with the same output directory.".format(infile))
+        sys.exit()
 
-    # print(tails.head())
-
-    # standard_names = ['NM_A10_6','NM_A30_6','NM_A110_6','NM_A210_6','NM_A10_7','NM_A50_7','NM_A100_7','NM_A150_7','NM_A200_7','NM_A250_7','NM_A300_7']
-
-    # fig = plt.figure()
-    # ax = plt.subplot(1,1,1)
-
-    # standards = tails[tails[0].isin(standard_names)]
-    # print(standards.head())
-    # for standard, group in standards.groupby(0):
-    #     bins, cdf = get_cdf(group[3].values)
-    #     ax.plot(bins, cdf, label=standard.replace('NM_',''))
-
-    # ax.legend(loc='lower right', fontsize=7, ncol=2)
-
-    # fig.savefig(os.path.join(options.OUTDIR, 'standard_plot.pdf'))
-    # plt.close()
-
-    tails = pd.read_csv(options.INFILE, sep='\t')
+    # read in tail lengths and aggregate by accession
+    tails = pd.read_csv(infile, sep='\t')
 
     gene_summary = []
     for accession, group in tails.groupby('accession'):
@@ -59,18 +47,17 @@ if __name__ == '__main__':
     gene_summary.columns = ['accession', 'num_tags', 'mean_tail_length', 'median_tail_length']
     gene_summary.to_csv(os.path.join(options.OUTDIR, 'tail_lengths_summarized.txt'), sep='\t', index=False)
 
-    fig = plt.figure()
-    ax = plt.subplot(1,1,1)
-
+    # plot standards if they exist
     standards = tails[tails['chr'] == 'standard']
-    for standard, group in standards.groupby('accession'):
-        bins, cdf = get_cdf(group['tail_length'].values)
-        ax.plot(bins, cdf, label=standard)
+    if len(standards) > 0:
+        fig = plt.figure()
+        ax = plt.subplot(1,1,1)
 
-    ax.legend(loc='lower right', fontsize=7, ncol=2)
+        for standard, group in standards.groupby('accession'):
+            bins, cdf = get_cdf(group['tail_length'].values)
+            ax.plot(bins, cdf, label=standard)
 
-    fig.savefig(os.path.join(options.OUTDIR, 'standard_plot.pdf'))
-    plt.close()
+        ax.legend(loc='lower right', fontsize=7, ncol=2)
 
-
-
+        fig.savefig(os.path.join(options.OUTDIR, 'standard_plot.pdf'))
+        plt.close()

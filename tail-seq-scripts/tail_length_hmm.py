@@ -23,9 +23,6 @@ if __name__ == '__main__':
 
     (options, args) = parser.parse_args()
 
-    if options.OUTDIR[-1] == '/':
-        options.OUTDIR = options.OUTDIR[:-1]
-
     print("Writing tail-length outputs to {}".format(options.OUTDIR))
 
     # find how long the signal file is
@@ -40,16 +37,21 @@ if __name__ == '__main__':
     warnings.filterwarnings("ignore", category=DeprecationWarning)
     warnings.filterwarnings("ignore", category=RuntimeWarning)
 
-    # if the output directory doesn't exist, quit
-    if not os.path.exists(options.OUTDIR):
-        print("{} does not exist. Run make-signal with the same output directory".format(options.OUTDIR))
-        sys.exit()
+    signal_file = os.path.join(options.OUTDIR, 'normalized_t_signal.txt')
+    short_tail_file = os.path.join(options.OUTDIR, 'short_tails.txt')
+    all_info_file = os.path.join(options.OUTDIR, 'all_read_info.txt')
+
+    # if the necesary input files don't exist, quit
+    for f in [signal_file, short_tail_file, all_info_file]:
+        if not os.path.exists(f):
+            print("{} does not exist. Run T-signal script first with the same output directory.".format(f))
+            sys.exit()
 
     ### get training set ###
     t0 = time.time()
 
     # collect random rows to train
-    training_values, training_seq_lengths = tail_length_helpers.read_training_set(options.SIGNAL, file_length, config.TRAIN_SIZE, random_seed=0)
+    training_values, training_seq_lengths = tail_length_helpers.read_training_set(signal_file, file_length, config.TRAIN_SIZE, random_seed=0)
 
     print('{:.3f} seconds'.format(time.time() - t0))
     print("Training HMM...")
@@ -112,12 +114,12 @@ if __name__ == '__main__':
         return ids, tail_lengths
 
     # read in signals as chunks and calculate viterbi emissions
-    chunk_iterator = pd.read_csv(options.SIGNAL, sep='\t', header=None, iterator=True, chunksize=10000)
+    chunk_iterator = pd.read_csv(signal_file, sep='\t', header=None, iterator=True, chunksize=10000)
     finished = 0
     all_ids, all_tls = [], []
 
     # if indicated, run parallel version
-    if options.FUTURES > 1:
+    if config.FUTURES > 1:
         print("Running parallel version")
     else:
         print("Running non-parallel version")
@@ -125,7 +127,7 @@ if __name__ == '__main__':
     ix = 0
     chunks = []
     chunk = []
-    with open(options.SIGNAL, 'r') as infile:
+    with open(signal_file, 'r') as infile:
         for line in infile:
 
             # add lines to the chunk
@@ -137,9 +139,9 @@ if __name__ == '__main__':
             if ix == config.CHUNKSIZE:
 
                 # if indicated, run in parallel
-                if options.FUTURES > 1:
+                if config.FUTURES > 1:
                     chunks.append(chunk)
-                    if len(chunks) == options.FUTURES:
+                    if len(chunks) == config.FUTURES:
                         with concurrent.futures.ProcessPoolExecutor() as executor:
                             results = executor.map(get_batch_tail_length, chunks)
 
@@ -162,7 +164,7 @@ if __name__ == '__main__':
                 chunk = []
 
     # process last batch
-    if options.FUTURES > 1:
+    if config.FUTURES > 1:
         if len(chunk) > 0:
             chunks.append(chunk)
 
@@ -188,12 +190,12 @@ if __name__ == '__main__':
     print(len(tail_length_df))
 
     # read in short tails and append
-    short_tails = pd.read_csv(os.path.join(options.OUTDIR, 'short_tails.txt'), sep='\t', index_col='read_ID')
+    short_tails = pd.read_csv(short_tail_file, sep='\t', index_col='read_ID')
     short_tails['method'] = 'manual_call'
     tail_length_df = pd.concat([tail_length_df, short_tails])
 
     # import and merge with other information
-    other_info = pd.read_csv(os.path.join(options.OUTDIR, 'all_read_info.txt'), sep='\t', index_col='read_ID')
+    other_info = pd.read_csv(all_info_file, sep='\t', index_col='read_ID')
     merged = pd.concat([tail_length_df, other_info], axis=1, join='inner')
 
     print(len(tail_length_df), len(merged))

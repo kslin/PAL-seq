@@ -16,19 +16,17 @@ if __name__ == '__main__':
     parser = OptionParser()
     parser.add_option("--f1", dest="FASTQ1", help="gzipped fastq file for 5' reads")
     parser.add_option("--f2", dest="FASTQ2", help="gzipped fastq file for 3' reads")
-    parser.add_option("-b", dest="BEDFILE", help="output of intersect bed")
     parser.add_option("-i", "--intensity", dest="INTENSITY", help="gzipped intensity file for read2")
     parser.add_option("-s","--standards", dest="STANDARDS", default=None, help="file with standard sequences")
     parser.add_option("-o","--outdir", dest="OUTDIR", help="output directory")
-    parser.add_option("-t","--short_tails", dest="SHORT_TAILS", help="output file for manually called short tails")
-    parser.add_option("-d","--dropped", dest="DROPPED", help="output file for dropped reads")
-    parser.add_option("-f", "--futures", dest="FUTURES", type="int", default=1, help="number of threads to use")
 
     (options, args) = parser.parse_args()
 
-    # if the output directory doesn't exist, make it
-    if not os.path.exists(options.OUTDIR):
-        os.makedirs(options.OUTDIR)
+    # if the necesary input file doesn't exist, quit
+    bedfile = os.path.join(options.OUTDIR, 'read1.bed')
+    if not os.path.exists(bedfile):
+        print("{} does not exist. Run intersectBed first with the same output directory.".format(f))
+        sys.exit()
 
     # start writing log file
     logfile = open(os.path.join(options.OUTDIR, 'logfile.txt'), 'w')
@@ -37,12 +35,12 @@ if __name__ == '__main__':
     t0 = time.time()
 
     # dedup bed input and write dropped reads
-    bedfile = pd.read_csv(options.BEDFILE, sep='\t', header=None, usecols=[0,1,2,3,18,20], engine='c')
-    bedfile[3] = [config.fastq_header_to_ID(x) for x in bedfile[3]]
-    reads_dedup, dropped_reads = preprocess_helpers.dedup_bed(bedfile)
+    bed_output = pd.read_csv(bedfile, sep='\t', header=None, usecols=[0,1,2,3,18,20], engine='c')
+    bed_output[3] = [config.fastq_header_to_ID(x) for x in bed_output[3]]
+    reads_dedup, dropped_reads = preprocess_helpers.dedup_bed(bed_output)
 
     # start writing dropped reads
-    dropped_reads_outfile = open(options.DROPPED, 'w')
+    dropped_reads_outfile = open(os.path.join(options.OUTDIR, 'dropped_reads.txt'), 'w')
     dropped_reads_outfile.write('read_ID\treason\n')
     for r in dropped_reads:
         dropped_reads_outfile.write('{}\tmulti_accession_map\n'.format(r))
@@ -75,7 +73,7 @@ if __name__ == '__main__':
     t0 = time.time()
 
     # read in read2, separate short tails
-    keep_dict, dropped_read2, num_short_tails = preprocess_helpers.parse_read2(options.FASTQ2, keep_dict, options.SHORT_TAILS)
+    keep_dict, dropped_read2, num_short_tails = preprocess_helpers.parse_read2(options.FASTQ2, keep_dict, options.OUTDIR)
 
     for read, reason in dropped_read2:
         dropped_reads_outfile.write('{}\t{}\n'.format(read, reason))
@@ -96,7 +94,7 @@ if __name__ == '__main__':
     # pickle.dump(keep_dict, open(os.path.join(options.OUTDIR, 'keep_dict.pickle'), "w"))
     # keep_dict = pickle.load(open(os.path.join(options.OUTDIR, 'keep_dict.pickle'), "rb"))   
 
-    dropped_intensity, num_reads_kept = get_signal_helpers.calculate_intensities(options.INTENSITY, keep_dict, options.OUTDIR, options.FUTURES)
+    dropped_intensity, num_reads_kept = get_signal_helpers.calculate_intensities(options.INTENSITY, keep_dict, options.OUTDIR, config.FUTURES)
     
     logfile.write('Time to calculate normalized T-signal\t{}\n'.format(str(datetime.timedelta(seconds=int(time.time()-t0)))))
     logfile.write('Skipped due to low quality intensity values\t{}\n'.format(len(dropped_intensity)))
