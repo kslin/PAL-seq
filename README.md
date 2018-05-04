@@ -4,10 +4,10 @@ This pipeline aligns reads from PAIL-Seq, find the 3' ends of transcripts, and e
 
 Requirements:
 - Python 3.4 or above
-- STAR
+- STAR (optional)
 - bedtools
 
-For the python requirements, run:
+We recommend making a Python3 virtual environment. After cloning this repository, navigate to the directory and install the python dependencies:
 ```
 pip install -r requirements.txt
 ```
@@ -18,7 +18,7 @@ Input files:
 - fastq2: fastq file from read2, gzipped
 - gff: gene annotations in gff format
 - intensity: raw intensity values for read2, gzipped
-- standard_file: tab-delimited file where the first column is the standard sequence and the second column is the name of the standard (optional, example in standard_sequences.txt)
+- standard_file: tab-delimited file where the first column is the standard sequence and the second column is the name of the standard (optional, example in examples/standard_sequences.txt)
 - outdir: directory for output files
 
 1. Check run configurations in tail-seq-scripts/config.py. Check STAR parameters in Makefile.
@@ -26,6 +26,11 @@ Input files:
 3. Navigate to the tail-seq directory and run all scripts at once:
 ```
 make genomeDir=<genomeDir> fastq1=<fastq1> fastq2=<fastq2> gff=<gff> intensity=<intensity> standard_file=<standard_file> outdir=<outdir> all
+```
+
+To run after genome alignment step, make sure there is a sorted BAM file named STAR_Aligned.sortedByCoord.out.bam in your output directory. Then run:
+```
+make fastq1=<fastq1> fastq2=<fastq2> gff=<gff> intensity=<intensity> standard_file=<standard_file> outdir=<outdir> all_from_bam
 ```
 
 -- OR --
@@ -58,7 +63,7 @@ python tail-seq-scripts/plot_t_signals.py -o <outdir>
 ```
 Here is an example:
 
-![Alt text](examples/signal_plot.pdf "T-signal plot")
+![](examples/signal_plot.png)
 
 summarize_results.py computes mean and median tails lengths for each accession and plots CDFs of standards (if a standard file was given earlier)
 
@@ -68,4 +73,4 @@ python tail-seq-scripts/summarize_results.py -o <outdir>
 
 Here is an example:
 
-![Alt text](examples/standard_plot.pdf "Standard plot")
+![](examples/standard_plot.png)

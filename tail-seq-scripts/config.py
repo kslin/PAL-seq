@@ -15,7 +15,7 @@ def intensity_line_to_ID(line):
   read_ID = ':'.join(line[:3])
   return read_ID
 
-### Data configurations ###
+### Preprocess run configurations ###
 
 FUTURES = 24 # number of processes, set to 1 if not using multiprocessing
 LEN1, LEN2 = 50, 250 # length of read1 and read2

@@ -59,5 +59,5 @@ if __name__ == '__main__':
 
         ax.legend(loc='lower right', fontsize=7, ncol=2)
 
-        fig.savefig(os.path.join(options.OUTDIR, 'standard_plot.pdf'))
+        fig.savefig(os.path.join(options.OUTDIR, 'standard_plot.png'))
         plt.close()

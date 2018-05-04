@@ -1,6 +1,7 @@
 import matplotlib
 matplotlib.use('Agg')
 
+import bisect
 from optparse import OptionParser
 import os
 
@@ -49,5 +50,5 @@ if __name__ == '__main__':
     ax.set_ylabel('Normalized T-signal')
     ax.set_xlabel('Position from 3` end')
 
-    fig.savefig(os.path.join(options.OUTDIR, 'signal_plot.pdf'))
+    fig.savefig(os.path.join(options.OUTDIR, 'signal_plot.png'))
     plt.close()
