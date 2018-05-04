@@ -58,7 +58,7 @@ python tail-seq-scripts/plot_t_signals.py -o <outdir>
 ```
 Here is an example:
 
-![alt text](examples/signal_plot.pdf "T-signal plot")
+![Alt text](examples/signal_plot.pdf "T-signal plot")
 
 summarize_results.py computes mean and median tails lengths for each accession and plots CDFs of standards (if a standard file was given earlier)
 
@@ -68,4 +68,4 @@ python tail-seq-scripts/summarize_results.py -o <outdir>
 
 Here is an example:
 
-![alt text](examples/standard_plot.pdf "Standard plot")
+![Alt text](examples/standard_plot.pdf "Standard plot")
