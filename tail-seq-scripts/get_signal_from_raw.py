@@ -17,7 +17,7 @@ if __name__ == '__main__':
     parser.add_option("--f1", dest="FASTQ1", help="gzipped fastq file for 5' reads")
     parser.add_option("--f2", dest="FASTQ2", help="gzipped fastq file for 3' reads")
     parser.add_option("-i", "--intensity", dest="INTENSITY", help="gzipped intensity file for read2")
-    parser.add_option("-s","--standards", dest="STANDARDS", default=None, help="file with standard sequences")
+    parser.add_option("-s","--standards", dest="STANDARDS", help="file with standard sequences")
     parser.add_option("-o","--outdir", dest="OUTDIR", help="output directory")
 
     (options, args) = parser.parse_args()
@@ -25,11 +25,11 @@ if __name__ == '__main__':
     # if the necesary input file doesn't exist, quit
     bedfile = os.path.join(options.OUTDIR, 'read1.bed')
     if not os.path.exists(bedfile):
-        print("{} does not exist. Run intersectBed first with the same output directory.".format(f))
+        print("{} does not exist. Run intersectBed first with the same output directory.".format(bedfile))
         sys.exit()
 
     # start writing log file
-    logfile = open(os.path.join(options.OUTDIR, 'logfile.txt'), 'w')
+    logfile = open(os.path.join(options.OUTDIR, 'logfile.txt'), 'w', 0)
 
     # start timing
     t0 = time.time()
@@ -54,9 +54,11 @@ if __name__ == '__main__':
     t0 = time.time()
 
     # read in standards
-    if options.STANDARDS is None:
+    if not os.path.exists(options.STANDARDS):
+        logfile.write('Find standards\tFalse\n')
         standard_dict = {}
     else:
+        logfile.write('Find standards\tTrue\n')
         standards = pd.read_csv(options.STANDARDS, sep='\t', header=None)
         standard_dict = {preprocess_helpers.reverse_complement(x):y for (x,y) in zip(standards[0], standards[1])}
 

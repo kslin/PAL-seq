@@ -18,7 +18,7 @@ Input files:
 - fastq2: fastq file from read2, gzipped
 - gff: gene annotations in gff format
 - intensity: raw intensity values for read2, gzipped
-- standard_file: tab-delimited file where the first column is the standard sequence and the second column is the name of the standard (optional, example in examples/standard_sequences.txt)
+- standard_file: tab-delimited file where the first column is the standard sequence and the second column is the name of the standard. If not using, set to "none"
 - outdir: directory for output files
 
 1. Check run configurations in tail-seq-scripts/config.py. Check STAR parameters in Makefile.
