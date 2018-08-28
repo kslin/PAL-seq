@@ -1,4 +1,5 @@
 import numpy as np
+import re
 
 ### Functions for extracting the same read ID's from fastq files and intensity files ###
 
@@ -6,7 +7,8 @@ def fastq_header_to_ID(line):
   """
   Convert fastq header to read ID
   """
-  return line.split('#')[0].replace('WIGTC-HISEQ:2:','')
+  searchSTR = re.compile('WIGTC-HISEQ:\\d:')
+  return re.sub(searchSTR,'',line.split('#')[0])
 
 def intensity_line_to_ID(line):
   """
