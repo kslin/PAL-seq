@@ -12,16 +12,20 @@ import pandas as pd
 import config
 import tail_length_helpers
 
-
 if __name__ == '__main__':
 
     parser = OptionParser()
     parser.add_option("-s", dest="SIGNAL", help="signal file output from get_signal.py")
     parser.add_option("-o", "--outdir", dest="OUTDIR", help="output directory")
-    parser.add_option("--twostate", action="store_true", dest="TWOSTATE", default=True, help="toggle for 2-state model")
+    parser.add_option("--twostate", dest="TWOSTATE", default=True, help="toggle for 2-state model")
     parser.add_option("-f", "--futures", dest="FUTURES", type="int", default=1, help="number of threads to use")
 
     (options, args) = parser.parse_args()
+    #parse the boolean here
+    if options.TWOSTATE=='True': options.TWOSTATE=True
+    elif options.TWOSTATE=='False': options.TWOSTATE=False
+    else: options.TWOSTATE=True
+
 
     print("Writing tail-length outputs to {}".format(options.OUTDIR))
 
@@ -91,12 +95,12 @@ if __name__ == '__main__':
         # extract signal
         for line in lines:
             line = line[:-1].split('\t') # remove newline character and split by tab
+            line = tail_length_helpers.smooth(line)
             ids.append(line[0])
-            tail_start = int(line[1])
+            tail_start = int(float(line[1]))
             signals.append([config.START_SIGNAL])
             for val in line[2 + tail_start:]:
                 signals.append([float(val)])
-
             lengths.append(config.LEN2 - tail_start + 1)
 
         # predict states

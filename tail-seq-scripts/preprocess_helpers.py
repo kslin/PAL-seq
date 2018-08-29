@@ -52,33 +52,33 @@ def parse_read1(fastq1, keep_dict, standard_dict):
     """Parse fastq1 file, extract reads that match standard sequences.
 
     Arguments:
-        fastq1: path to gzipped fastq file for read1
+        fastq1: openened fastq1 file, from tarfile, with lines as binary. 
         keep_dict: dictionary of {read_ID: None} for reads that pass filters so far
         standard_dict: dictionary of standard sequences
     """
     new_keep_dict = {}
     standard_reads = []
     line_counter = 0
-    with gzip.open(fastq1, 'rt') as infile:
-        for line in infile:
-            if line_counter == 0:
-                read_ID = config.fastq_header_to_ID(line[1:])
-            elif line_counter == 1:
-                seq = line[:-1]
+    for line in fastq1:
+        line = line.decode("utf-8") #This line is to decode the tarfile output to utf-8. 
+        if line_counter == 0:
+            read_ID = config.fastq_header_to_ID(line[1:])
+        elif line_counter == 1:
+            seq = line[:-1]
 
-                is_standard = False
-                for standard, name in standard_dict.items():
-                    if standard in seq:
-                        standard_reads.append(['standard', 0, read_ID, '+', standard_dict[standard]])
-                        new_keep_dict[read_ID] = seq
-                        is_standard = True
-                        break
+            is_standard = False
+            for standard, name in standard_dict.items():
+                if standard in seq:
+                    standard_reads.append(['standard', 0, read_ID, '+', standard_dict[standard]])
+                    new_keep_dict[read_ID] = seq
+                    is_standard = True
+                    break
 
-                if is_standard == False:
-                    if read_ID in keep_dict:
-                        new_keep_dict[read_ID] = seq
+            if is_standard == False:
+                if read_ID in keep_dict:
+                    new_keep_dict[read_ID] = seq
 
-            line_counter = (line_counter + 1) % 4
+        line_counter = (line_counter + 1) % 4
 
     if len(standard_reads) == 0:
         standard_reads = pd.DataFrame(None)
@@ -95,7 +95,7 @@ def parse_read2(fastq2, keep_dict, outdir):
     Manually call tails between 4 and 9 nucleotides (inclusive).
 
     Arguments:
-        fastq2: path to gzipped fastq file for read1
+        fastq2: openened fastq2 file, from tarfile, with lines as binary. 
         keep_dict: dictionary of {read_ID: read1 sequence} for reads that pass filters so far
         outdir: path to output directory
     """
@@ -105,47 +105,47 @@ def parse_read2(fastq2, keep_dict, outdir):
     num_short_tails = 0
     dropped_read2 = []
     line_counter = 0
-    with gzip.open(fastq2, 'rt') as infile:
-        for line in infile:
-            if line_counter == 0:
-                if line[0] != '@':
-                    raise ValueError('Fastq2 file must begin with @')
+    for line in fastq2:
+        line = line.decode("utf-8")
+        if line_counter == 0:
+            if line[0] != '@':
+                raise ValueError('Fastq2 file must begin with @')
 
-                read_ID = config.fastq_header_to_ID(line[1:])
-            elif line_counter == 1:
-                seq = line
+            read_ID = config.fastq_header_to_ID(line[1:])
+        elif line_counter == 1:
+            seq = line
 
-                if read_ID in keep_dict:
+            if read_ID in keep_dict:
 
-                    # pass if basecaller confused about more than 2 bases in first 25 nucleotides
-                    if seq[:25].count('N') >= 2:
-                        dropped_read2.append([read_ID, 'low_qual_read2'])
-                    
+                # pass if basecaller confused about more than 2 bases in first 25 nucleotides
+                if seq[:25].count('N') >= 2:
+                    dropped_read2.append([read_ID, 'low_qual_read2'])
+                
+                else:
+                    # look for at least 11 contiguous T's in first 30 nucleotides, allowing 1 error
+                    match = regex.search(r'TTTTTTTTTTT{e<=1}', seq[:30])
+
+                    # if found, keep the ID and where the tail starts
+                    if match is not None:
+                        match_start = match.start()
+                        new_keep_dict[read_ID] = (keep_dict[read_ID], match_start)
+
+                    # otherwise manually call tail if read starts with >= 4 contiguous T's
                     else:
-                        # look for at least 11 contiguous T's in first 30 nucleotides, allowing 1 error
-                        match = regex.search(r'TTTTTTTTTTT{e<=1}', seq[:30])
+                        if seq[:4] == 'TTTT':
+                            TL = 4
+                            for nt in seq[4:10]:
+                                if nt == 'T':
+                                    TL += 1
+                                else:
+                                    break
+                            short_tail_outfile.write('{}\t{}\n'.format(read_ID, TL))
+                            num_short_tails += 1
 
-                        # if found, keep the ID and where the tail starts
-                        if match is not None:
-                            match_start = match.start()
-                            new_keep_dict[read_ID] = (keep_dict[read_ID], match_start)
-
-                        # otherwise manually call tail if read starts with >= 4 contiguous T's
                         else:
-                            if seq[:4] == 'TTTT':
-                                TL = 4
-                                for nt in seq[4:10]:
-                                    if nt == 'T':
-                                        TL += 1
-                                    else:
-                                        break
-                                short_tail_outfile.write('{}\t{}\n'.format(read_ID, TL))
-                                num_short_tails += 1
+                            dropped_read2.append([read_ID, 'no_tail'])
 
-                            else:
-                                dropped_read2.append([read_ID, 'no_tail'])
-
-            line_counter = (line_counter + 1) % 4
+        line_counter = (line_counter + 1) % 4
 
     short_tail_outfile.close()
     return new_keep_dict, dropped_read2, num_short_tails

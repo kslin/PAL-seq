@@ -1,4 +1,5 @@
 import numpy as np
+import re
 
 ### Functions for extracting the same read ID's from fastq files and intensity files ###
 
@@ -6,7 +7,8 @@ def fastq_header_to_ID(line):
   """
   Convert fastq header to read ID
   """
-  return line.split('#')[0].replace('WIGTC-HISEQ:2:','')
+  searchSTR = re.compile('WIGTC-HISEQ:\\d:')
+  return re.sub(searchSTR,'',line.split('#')[0])
 
 def intensity_line_to_ID(line):
   """
@@ -42,7 +44,7 @@ HMM_PARAMS_3STATE = {
                         "TRANSITION_INIT": np.array([[0.95, 0.03, 0.019, 0.001],
                                                      [0.001, 0.749, 0.249, 0.001],
                                                      [0.001, 0.001, 0.997, 0.001],
-                                                     [0.95, 0.025, 0.0249, 0.001]]),
+                                                     [0.95, 0.025, 0.024, 0.001]]),
 
                         "MEANS_INIT": np.array([[1.0], [0.0], [-1.0], [START_SIGNAL]]),
 
