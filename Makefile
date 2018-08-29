@@ -38,16 +38,16 @@ intersect-gff:
 	bedtools intersect -abam $(outdir)/STAR_Aligned.sortedByCoord.out.bam -b $(gff) -bed -wb -${strand} > $(outdir)/read1.bed
 
 signal-from-raw: ## Extract intensities for mapping reads and calculate normalized T-signal
-	python /lab/solexa_bartel/teisen/RNAseq/Scripts/PALseqKlinMod/tail-seq-scripts/get_signal_from_raw.py --f1 $(fastq1) --f2 $(fastq2) -i $(intensity) -s $(standard_file) -o $(outdir) --strand ${strand}
+	python tail-seq-scripts/get_signal_from_raw.py --f1 $(fastq1) --f2 $(fastq2) -i $(intensity) -s $(standard_file) -o $(outdir) --strand ${strand}
 
 signal-plot: ## Plot T-signal density
-	python /lab/solexa_bartel/teisen/RNAseq/Scripts/PALseqKlinMod/tail-seq-scripts/plot_t_signals.py -o $(outdir) -b 100
+	python tail-seq-scripts/plot_t_signals.py -o $(outdir) -b 100
 
 tail-seq: ## Train and run HMM for calling tail lengths
-	python /lab/solexa_bartel/teisen/RNAseq/Scripts/PALseqKlinMod/tail-seq-scripts/tail_length_hmm.py -o $(outdir) --twostate ${state}
+	python tail-seq-scripts/tail_length_hmm.py -o $(outdir) --twostate ${state}
 
 summary: ## Aggregate individual tail lengths by accession and plot standards
-	python /lab/solexa_bartel/teisen/RNAseq/Scripts/PALseqKlinMod/tail-seq-scripts/summarize_results.py -o $(outdir)
+	python PALseqKlinMod/tail-seq-scripts/summarize_results.py -o $(outdir)
 
 all: parseArgs align-to-genome intersect-gff signal-from-raw signal-plot tail-seq summary ## Run all at once
 
