@@ -1,6 +1,6 @@
-# Tail-Seq
+# PAL-Seq
 
-This pipeline aligns reads from PAIL-Seq, find the 3' ends of transcripts, and estimates poly(A)-tail lengths.
+This pipeline aligns reads from PAL-Seq v2, find the 3' ends of transcripts, and estimates poly(A)-tail lengths.
 
 Requirements:
 - Python 3.4 or above
