@@ -14,7 +14,7 @@ fastq1TAR=tarfile.open(name=sys.argv[1], mode='r:gz')
 fastq1open=fastq1TAR.extractfile(fastq1TAR.next())
 
 fastq2TAR=tarfile.open(name=sys.argv[2], mode='r:gz')
-fastq2open=fastq1TAR.extractfile(fastq1TAR.next())
+fastq2open=fastq2TAR.extractfile(fastq2TAR.next())
 
 counter = 0
 
