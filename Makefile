@@ -11,6 +11,7 @@ Phasing?=False
 clipNo?=0
 
 #Parse the arguments for the datatype
+###TJE 20181209 Need to change the lines concerning parsing of PALseq and Tail-seq data to give warnings and exit if requirements aren't met
 ifeq (${DataType}, PALseq)
 	strand=S
 	state=True
