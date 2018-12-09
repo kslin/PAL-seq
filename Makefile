@@ -47,7 +47,7 @@ tail-seq: ## Train and run HMM for calling tail lengths
 	python tail-seq-scripts/tail_length_hmm.py -o $(outdir) --twostate ${state}
 
 summary: ## Aggregate individual tail lengths by accession and plot standards
-	python PALseqKlinMod/tail-seq-scripts/summarize_results.py -o $(outdir)
+	python tail-seq-scripts/summarize_results.py -o $(outdir)
 
 all: parseArgs align-to-genome intersect-gff signal-from-raw signal-plot tail-seq summary ## Run all at once
 
