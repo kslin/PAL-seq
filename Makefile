@@ -4,7 +4,11 @@
 help: ## Display this help message
 	@echo "Please run \`make <inputs as environment variables> <target>\` where <target> is one of"
 	@perl -nle'print $& if m{^[\.a-zA-Z_-]+:.*?## .*$$}' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m  %-25s\033[0m %s\n", $$1, $$2}'
-	@echo "See README for examples."
+	@echo "See README for examples.\n"
+	@echo "Messages:\n"
+	@echo "Did you set the read length in the config file?"
+	@echo "Are you using an NN quality filtering for read two, set in the config file?\n\n"
+
 
 DataType?=Tail-seq
 Phasing?=False

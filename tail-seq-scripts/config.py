@@ -20,7 +20,7 @@ def intensity_line_to_ID(line):
 ### Preprocess run configurations ###
 
 FUTURES = 24 # number of processes, set to 1 if not using multiprocessing
-LEN1, LEN2 = 50, 250 # length of read1 and read2
+LEN1, LEN2 = 40, 250 # length of read1 and read2
 SIGNAL_COL_START = 4 # column in intensity file where intensity values start
 SIGNAL_COL_END = (4*(LEN1 + LEN2)) + 4 # column in intensity file where intensity values end
 NUM_SKIP = 10 # number of nucleotides to skip when normalizing intensities
@@ -28,6 +28,7 @@ NUC_ORDER = ['A','C','G','T'] # order of nucleotides in intensity file
 UPPERBOUND, LOWERBOUND = 5, -5 # bounds for normalized T-signal
 CHUNKSIZE = 1000 # number of intensities to evaluate at a time
 NAN_LIMIT = 5 # number of positions with no signal in the intensity file allowed
+QUAL = False
 
 # WINDOW_SIZE, CUTOFF = 40, -20
 

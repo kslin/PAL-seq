@@ -90,7 +90,7 @@ def parse_read1(fastq1, keep_dict, standard_dict):
     return new_keep_dict, standard_reads
 
 
-def parse_read2(fastq2, keep_dict, outdir):
+def parse_read2(fastq2, keep_dict, outdir, qual_filter = True):
     """Parse fastq2 file, filter low quality or very short tails.
     Manually call tails between 4 and 9 nucleotides (inclusive).
 
@@ -98,6 +98,8 @@ def parse_read2(fastq2, keep_dict, outdir):
         fastq2: openened fastq2 file, from tarfile, with lines as binary. 
         keep_dict: dictionary of {read_ID: read1 sequence} for reads that pass filters so far
         outdir: path to output directory
+
+    Modified by TJE on 20190125 to allow argument to turn off low quality filtering. 
     """
     new_keep_dict = {}
     short_tail_outfile = open(os.path.join(outdir, 'short_tails.txt'), 'w')
@@ -105,6 +107,10 @@ def parse_read2(fastq2, keep_dict, outdir):
     num_short_tails = 0
     dropped_read2 = []
     line_counter = 0
+
+    if qual_filter: r = regex.compile('(%s){e<=1}' % 'TTTTTTTTTTT')
+    else: r = regex.compile('(%s){e<=2}' % 'TTTTTTTTTTT')
+
     for line in fastq2:
         line = line.decode("utf-8")
         if line_counter == 0:
@@ -118,12 +124,12 @@ def parse_read2(fastq2, keep_dict, outdir):
             if read_ID in keep_dict:
 
                 # pass if basecaller confused about more than 2 bases in first 25 nucleotides
-                if seq[:25].count('N') >= 2:
+                if qual_filter and seq[:25].count('N') >= 2:
                     dropped_read2.append([read_ID, 'low_qual_read2'])
                 
                 else:
                     # look for at least 11 contiguous T's in first 30 nucleotides, allowing 1 error
-                    match = regex.search(r'TTTTTTTTTTT{e<=1}', seq[:30])
+                    match = r.search(seq[:30]) #changes this to two mismatches.
 
                     # if found, keep the ID and where the tail starts
                     if match is not None:
