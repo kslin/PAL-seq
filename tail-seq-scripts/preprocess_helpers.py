@@ -126,11 +126,9 @@ def parse_read2(fastq2, keep_dict, outdir, qual_filter = True):
                 # pass if basecaller confused about more than 2 bases in first 25 nucleotides
                 if qual_filter and seq[:25].count('N') >= 2:
                     dropped_read2.append([read_ID, 'low_qual_read2'])
-                
                 else:
                     # look for at least 11 contiguous T's in first 30 nucleotides, allowing 1 error
-                    match = r.search(seq[:30]) #changes this to two mismatches if low_qual allowed. 
-
+                    match = r.search(seq[:30]) #changes this to two mismatches if low_qual allowed.  
                     # if found, keep the ID and where the tail starts
                     if match is not None:
                         match_start = match.start()
