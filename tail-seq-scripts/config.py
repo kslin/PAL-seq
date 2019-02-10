@@ -28,7 +28,7 @@ NUC_ORDER = ['A','C','G','T'] # order of nucleotides in intensity file
 UPPERBOUND, LOWERBOUND = 5, -5 # bounds for normalized T-signal
 CHUNKSIZE = 1000 # number of intensities to evaluate at a time
 NAN_LIMIT = 5 # number of positions with no signal in the intensity file allowed
-QUAL = False
+QUAL = True #If true, only one mismatch is allowed to call a tail with the first 11 nt being T. Else, two mismatches are allowed. 
 
 # WINDOW_SIZE, CUTOFF = 40, -20
 
