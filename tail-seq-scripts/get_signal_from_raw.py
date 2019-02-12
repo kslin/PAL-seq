@@ -70,8 +70,15 @@ if __name__ == '__main__':
 
 
     # iterate through read1, separate standards, extract sequences
-    fastq1Tarfile=tarfile.open(name=options.FASTQ1, mode='r:gz')
-    fastq1open=fastq1Tarfile.extractfile(fastq1Tarfile.next())
+    if config.FASTQ_GZIP==True:
+        fastq1open=gzip.open(options.FASTQ1, mode='rb')
+    elif config.FASTQ_GZIP==False:
+        fastq1open=open(name=options.FASTQ1,mode='r')
+    else:
+        fastq1Tarfile=tarfile.open(name=options.FASTQ1, mode='r:gz')
+        fastq1open=fastq1Tarfile.extractfile(fastq1Tarfile.next())
+    
+
     keep_dict, standard_reads = preprocess_helpers.parse_read1(fastq1open, keep_dict, standard_dict)
     fastq1open.close()
 
@@ -85,8 +92,14 @@ if __name__ == '__main__':
     t0 = time.time()
 
     # read in read2, separate short tails
-    fastq2Tarfile=tarfile.open(name=options.FASTQ2, mode='r:gz')
-    fastq2open=fastq2Tarfile.extractfile(fastq2Tarfile.next())
+    if config.FASTQ_GZIP==True:
+        fastq2open=gzip.open(options.FASTQ2,mode='rb')
+    elif config.FASTQ_GZIP==False:
+        fastq2open=open(name=options.FASTQ2,mode='r')
+    else:
+        fastq2Tarfile=tarfile.open(name=options.FASTQ2, mode='r:gz')
+        fastq2open=fastq2Tarfile.extractfile(fastq2Tarfile.next())
+
     keep_dict, dropped_read2, num_short_tails = preprocess_helpers.parse_read2(fastq2open, keep_dict, options.OUTDIR, config.QUAL)
     fastq2open.close()
 

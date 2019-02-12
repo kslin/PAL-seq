@@ -37,7 +37,7 @@ parseArgs:
 	@echo ${Phasing}
 
 align-to-genome: ## Align rest of reads to genome and intersect with gff file
-	STAR --genomeDir $(genomeDir) --outSAMtype BAM SortedByCoordinate --outSAMattributes NH HI AS nM jM --alignIntronMax 1 --runThreadN 24 --outFilterMultimapNmax 1 --clip5pNbases ${clipNo} --outFilterMismatchNoverLmax 0.04 --outFilterIntronMotifs RemoveNoncanonicalUnannotated --readFilesCommand tar xzfO --outSJfilterReads Unique --readFilesIn $(fastq1) $ --outFileNamePrefix $(outdir)/STAR_ > $(outdir)/stdOut_logFile.txt
+	STAR --genomeDir $(genomeDir) --outSAMtype BAM SortedByCoordinate --outSAMattributes NH HI AS nM jM --alignIntronMax 1 --runThreadN 24 --outFilterMultimapNmax 1 --clip5pNbases ${clipNo} --outFilterMismatchNoverLmax 0.04 --outFilterIntronMotifs RemoveNoncanonicalUnannotated --readFilesCommand zcat --outSJfilterReads Unique --readFilesIn $(fastq1) $ --outFileNamePrefix $(outdir)/STAR_ > $(outdir)/stdOut_logFile.txt
 
 intersect-gff:
 	bedtools intersect -abam $(outdir)/STAR_Aligned.sortedByCoord.out.bam -b $(gff) -bed -wb -${strand} > $(outdir)/read1.bed
@@ -57,6 +57,8 @@ summary: ## Aggregate individual tail lengths by accession and plot standards
 all: parseArgs align-to-genome intersect-gff signal-from-raw signal-plot tail-seq summary ## Run all at once
 
 all_from_bam: intersect-gff signal-from-raw signal-plot tail-seq summary ## Run without STAR aligning
+
+all_from_bed: signal-from-raw signal-plot tail-seq summary ##Run without intersect
 
 all_hmm: tail-seq summary 
 
