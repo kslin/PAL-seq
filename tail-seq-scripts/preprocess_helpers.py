@@ -119,7 +119,7 @@ def parse_read2(fastq2, keep_dict, outdir, qual_filter = True):
 
             read_ID = config.fastq_header_to_ID(line[1:])
         elif line_counter == 1:
-            seq = line
+            seq = line[config.TRIM_BASES:] #In a splint run, this is 0. In a direct lig run, this is 4. 
 
             if read_ID in keep_dict:
 
@@ -132,6 +132,7 @@ def parse_read2(fastq2, keep_dict, outdir, qual_filter = True):
                     # if found, keep the ID and where the tail starts
                     if match is not None:
                         match_start = match.start()
+                        if config.DIRECT: seq = match_start + config.TRIM_BASES #Remove the first x nt
                         new_keep_dict[read_ID] = (keep_dict[read_ID], match_start)
 
                     # otherwise manually call tail if read starts with >= 4 contiguous T's
