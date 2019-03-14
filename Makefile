@@ -40,7 +40,7 @@ align-to-genome: ## Align rest of reads to genome and intersect with gff file
 	STAR --genomeDir $(genomeDir) --outSAMtype BAM SortedByCoordinate --outSAMattributes NH HI AS nM jM --alignIntronMax 1 --runThreadN 24 --outFilterMultimapNmax 1 --clip5pNbases ${clipNo} --outFilterMismatchNoverLmax 0.04 --outFilterIntronMotifs RemoveNoncanonicalUnannotated --readFilesCommand zcat --outSJfilterReads Unique --readFilesIn $(fastq1) $ --outFileNamePrefix $(outdir)/STAR_ > $(outdir)/stdOut_logFile.txt
 
 intersect-gff:
-	bedtools intersect -abam $(outdir)/STAR_Aligned.sortedByCoord.out.bam -b $(gff) -bed -wb -${strand} > $(outdir)/read1.bed
+	bedtools intersect -abam $(outdir)/STAR_Aligned.sortedByCoord.out.bam -b $(gff) -bed -wb -wa -${strand} > $(outdir)/read1.bed
 
 signal-from-raw: ## Extract intensities for mapping reads and calculate normalized T-signal
 	python /lab/solexa_bartel/teisen/RNAseq/Scripts/PALseqKlinMod/tail-seq-scripts/get_signal_from_raw.py --f1 $(fastq1) --f2 $(fastq2) -i $(intensity) -s $(standard_file) -o $(outdir) --strand ${strand}
