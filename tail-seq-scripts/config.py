@@ -30,7 +30,7 @@ CHUNKSIZE = 1000 # number of intensities to evaluate at a time
 NAN_LIMIT = 5 # number of positions with no signal in the intensity file allowed
 QUAL = True #If true, only one mismatch is allowed to call a tail with the first 11 nt being T. Else, two mismatches are allowed. 
 #Gzip status for fastq and intensity files
-FASTQ_GZIP = "None" #if false, extension is .txt, if False extension is .txt.gz, else extension is .tar.gz
+FASTQ_GZIP = True #if false, extension is .txt, if True extension is .txt.gz, else extension is .tar.gz
 TRIM_BASES = 4 #Should be set to 0 for a splint ligation, 4 or 8 for a direct lig run. 
 # INTENSITY_GZIP = False #if false, extension is .txt, else extension is .txt.gz ##This is handled differently in the get_signal_helpers code
 

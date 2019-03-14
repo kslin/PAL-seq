@@ -32,8 +32,8 @@ def dedup_bed(bedfile):
     minus.columns = columns
 
     # for reads that map to multiple exons of the same transcript, take later exon
-    plus_last_exon = plus.drop_duplicates(subset=['read_ID','accession'], keep='first')
-    minus_last_exon = minus.drop_duplicates(subset=['read_ID','accession'], keep='first')
+    plus = plus.drop_duplicates(subset=['read_ID','accession'], keep='first') #Previously, I think these reads were lost. TJE 2019 03 13
+    minus = minus.drop_duplicates(subset=['read_ID','accession'], keep='first')
 
     # discard reads that map to multiple genes
     plus = plus.drop_duplicates(subset=['read_ID'], keep=False)
@@ -132,7 +132,7 @@ def parse_read2(fastq2, keep_dict, outdir, qual_filter = True):
                     # if found, keep the ID and where the tail starts
                     if match is not None:
                         match_start = match.start()
-                        if config.DIRECT: seq = match_start + config.TRIM_BASES #Remove the first x nt
+                        seq = match_start + config.TRIM_BASES #Remove the first x nt
                         new_keep_dict[read_ID] = (keep_dict[read_ID], match_start)
 
                     # otherwise manually call tail if read starts with >= 4 contiguous T's
