@@ -131,7 +131,7 @@ def parse_read2(fastq2, keep_dict, outdir, qual_filter = True):
                     match = r.search(seq[:30]) #changes this to two mismatches if low_qual allowed.  
                     # if found, keep the ID and where the tail starts
                     if match is not None:
-                        match_start = match.start()
+                        match_start = match.start() + config.TRIM_BASES #CHANGED TJE 2019 06 03
                         seq = match_start + config.TRIM_BASES #Remove the first x nt
                         new_keep_dict[read_ID] = (keep_dict[read_ID], match_start)
 
