@@ -6,7 +6,8 @@ import pandas as pd
 import regex
 
 import config
-
+from itertools import groupby
+import pysam
 
 def reverse_complement(seq):
     """Get reverse complement of sequence"""
@@ -47,6 +48,25 @@ def dedup_bed(bedfile):
 
     return reads_dedup, dropped_reads
 
+def parse_read2_BAM(outdir):
+    """Parse a BAM file for read2, returning a dictionary of soft clipping.
+
+    Arguments:
+        unopened outdir
+    """
+    sam = pysam.AlignmentFile(os.path.join(outdir, 'Read2STAR_Aligned.sortedByCoord.out.bam'), "rb")
+    softClippingDict = {}
+    for read in sam:
+        read_ID = config.fastq_header_to_ID(read.query_name)
+        if read.flag & 16 == 16: 
+            # seqRaw = reverse_complement(read.seq) #extract the strand from the bitwise operator.
+            softClipping = read.cigartuples[-1][1] #cigar identifiers for soft clipping. 
+        else: 
+            # seqRaw =  read.seq
+            softClipping = read.cigartuples[0][1]
+        softClippingDict[read_ID] = softClipping
+
+    return(softClippingDict)
 
 def parse_read1(fastq1, keep_dict, standard_dict):
     """Parse fastq1 file, extract reads that match standard sequences.
@@ -90,7 +110,7 @@ def parse_read1(fastq1, keep_dict, standard_dict):
     return new_keep_dict, standard_reads
 
 
-def parse_read2(fastq2, keep_dict, outdir, qual_filter = True):
+def parse_read2(fastq2, keep_dict, outdir, softClippingDict, qual_filter = True):
     """Parse fastq2 file, filter low quality or very short tails.
     Manually call tails between 4 and 9 nucleotides (inclusive).
 
@@ -108,15 +128,24 @@ def parse_read2(fastq2, keep_dict, outdir, qual_filter = True):
     dropped_read2 = []
     line_counter = 0
 
-    if qual_filter: r = regex.compile('(%s){e<=1}' % 'TTTTTTTTTTT')
-    else: r = regex.compile('(%s){e<=2}' % 'TTTTTTTTTTT')
+    if qual_filter and config.TRIM_BASES != 4: 
+        strMove = 0
+        r = regex.compile('(%s){e<=1}' % 'TTTTTTTTTTT')
+
+    elif not qual_filter and config.TRIM_BASES != 4: 
+        strMove = 0
+        r = regex.compile('(%s){e<=2}' % 'TTTTTTTTTTT')
+
+    elif config.TRIM_BASES == 4:
+        strMove = 20 
+        r = regex.compile('(%s){e<=1}' % 'TTTTTTTTTTTTTTTTTTTT') #20 for this. 
+
 
     for line in fastq2:
         line = line.decode("utf-8")
         if line_counter == 0:
             if line[0] != '@':
                 raise ValueError('Fastq2 file must begin with @')
-
             read_ID = config.fastq_header_to_ID(line[1:])
         elif line_counter == 1:
             seq = line[config.TRIM_BASES:] #In a splint run, this is 0. In a direct lig run, this is 4. 
@@ -128,7 +157,7 @@ def parse_read2(fastq2, keep_dict, outdir, qual_filter = True):
                     dropped_read2.append([read_ID, 'low_qual_read2'])
                 else:
                     # look for at least 11 contiguous T's in first 30 nucleotides, allowing 1 error
-                    match = r.search(seq[:30]) #changes this to two mismatches if low_qual allowed.  
+                    match = r.search(seq[:(30)]) #changes this to two mismatches if low_qual allowed.  
                     # if found, keep the ID and where the tail starts
                     if match is not None:
                         match_start = match.start() + config.TRIM_BASES #CHANGED TJE 2019 06 03
@@ -136,19 +165,26 @@ def parse_read2(fastq2, keep_dict, outdir, qual_filter = True):
                         new_keep_dict[read_ID] = (keep_dict[read_ID], match_start)
 
                     # otherwise manually call tail if read starts with >= 4 contiguous T's
-                    else:
-                        if seq[:4] == 'TTTT':
-                            TL = 4
-                            for nt in seq[4:10]:
-                                if nt == 'T':
-                                    TL += 1
-                                else:
-                                    break
+                    elif read_ID in softClippingDict and softClippingDict[read_ID] > 4: #This statement modified to allow for uridylation.
+                        #List of tuples nt then count
+                        firstBasesList = [[k, len(list(g))] for k, g in groupby(seq[0:(10 + strMove)])]
+                        if firstBasesList[0][0] == 'T':
+                            TL = firstBasesList[0][1]
                             short_tail_outfile.write('{}\t{}\n'.format(read_ID, TL))
                             num_short_tails += 1
 
-                        else:
-                            dropped_read2.append([read_ID, 'no_tail'])
+                        elif firstBasesList[0][0] == 'A' and firstBasesList[1][0] == 'T': #uridylation
+                            TL = firstBasesList[1][1] #Just the number of Ts
+                            short_tail_outfile.write('{}\t{}\n'.format(read_ID, TL))
+                            num_short_tails += 1
+
+                        elif firstBasesList[0][1] <= 2 and firstBasesList[1][0] == 'T': #allow guanylation for fewer than 2 Gs.
+                            TL = firstBasesList[1][1] #Just the number of Ts
+                            short_tail_outfile.write('{}\t{}\n'.format(read_ID, TL))
+                            num_short_tails += 1
+
+                    else:
+                        dropped_read2.append([read_ID, 'no_tail'])
 
         line_counter = (line_counter + 1) % 4
 

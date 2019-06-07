@@ -39,6 +39,9 @@ parseArgs:
 align-to-genome: ## Align rest of reads to genome and intersect with gff file
 	STAR --genomeDir $(genomeDir) --outSAMtype BAM SortedByCoordinate --outSAMattributes NH HI AS nM jM --alignIntronMax 1 --runThreadN 24 --outFilterMultimapNmax 1 --clip5pNbases ${clipNo} --outFilterMismatchNoverLmax 0.04 --outFilterIntronMotifs RemoveNoncanonicalUnannotated --readFilesCommand zcat --outSJfilterReads Unique --readFilesIn $(fastq1) $ --outFileNamePrefix $(outdir)/STAR_ > $(outdir)/stdOut_logFile.txt
 
+	#read2, only 50 nt, clipping the first 4. 
+	STAR --genomeDir ${index} --outSAMtype BAM SortedByCoordinate --outSAMattributes NH HI AS nM jM --alignIntronMax 1 --runThreadN 24 --outFilterMultimapNmax 1 --clip5pNbases 4 --clip3pNbases 200 --outFilterMismatchNoverLmax 0.04 --outFilterIntronMotifs RemoveNoncanonicalUnannotated --readFilesCommand zcat --outSJfilterReads Unique --readFilesIn $(fastq2) --outFileNamePrefix $(outdir)/Read2STAR_ > $(outdir)/stdOut_logFile_read2.txt
+
 intersect-gff:
 	bedtools intersect -abam $(outdir)/STAR_Aligned.sortedByCoord.out.bam -b $(gff) -bed -wb -wa -${strand} > $(outdir)/read1.bed
 
