@@ -165,7 +165,9 @@ def parse_read2(fastq2, keep_dict, outdir, softClippingDict, qual_filter = True)
                         new_keep_dict[read_ID] = (keep_dict[read_ID], match_start)
 
                     # otherwise manually call tail if read starts with >= 4 contiguous T's
-                    elif read_ID in softClippingDict and softClippingDict[read_ID] > 4: #This statement modified to allow for uridylation.
+                    elif read_ID in softClippingDict and softClippingDict[read_ID] <= 4: #If no soft clipping, no tail.
+                        dropped_read2.append([read_ID, 'no_tail'])
+                    else: #There either is soft clipping or the read2 isn't mapped. 
                         #List of tuples nt then count
                         firstBasesList = [[k, len(list(g))] for k, g in groupby(seq[0:(10 + strMove)])]
                         if firstBasesList[0][0] == 'T':
@@ -173,18 +175,17 @@ def parse_read2(fastq2, keep_dict, outdir, softClippingDict, qual_filter = True)
                             short_tail_outfile.write('{}\t{}\n'.format(read_ID, TL))
                             num_short_tails += 1
 
-                        elif firstBasesList[0][0] == 'A' and firstBasesList[1][0] == 'T': #uridylation
+                        elif len(firstBasesList) > 1 and firstBasesList[0][0] == 'A' and firstBasesList[1][0] == 'T': #uridylation
                             TL = firstBasesList[1][1] #Just the number of Ts
                             short_tail_outfile.write('{}\t{}\n'.format(read_ID, TL))
                             num_short_tails += 1
 
-                        elif firstBasesList[0][1] <= 2 and firstBasesList[1][0] == 'T': #allow guanylation for fewer than 2 Gs.
+                        elif len(firstBasesList) > 1 and firstBasesList[0][1] <= 2 and firstBasesList[1][0] == 'T': #allow guanylation for fewer than 2 Gs.
                             TL = firstBasesList[1][1] #Just the number of Ts
                             short_tail_outfile.write('{}\t{}\n'.format(read_ID, TL))
                             num_short_tails += 1
-
-                    else:
-                        dropped_read2.append([read_ID, 'no_tail'])
+                        else:
+                            dropped_read2.append([read_ID, 'no_tail'])
 
         line_counter = (line_counter + 1) % 4
 

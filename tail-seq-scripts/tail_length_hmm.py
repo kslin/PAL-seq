@@ -101,6 +101,14 @@ if __name__ == '__main__':
             signals.append([config.START_SIGNAL])
             for val in line[2 + tail_start:]:
                 signals.append([float(val)])
+            # if line[0] == '1101:13993:2125':
+            #     print("ID found, line 1:")
+            #     print(line)
+            #     print(line[0])
+            #     print(config.START_SIGNAL)
+            #     print(tail_start)
+            #     print(config.LEN2 - tail_start + 1)
+            #     FinalIdentifier = i #Marks the index where the read occurs.
             lengths.append(config.LEN2 - tail_start + 1)
 
         # predict states
@@ -114,7 +122,14 @@ if __name__ == '__main__':
             single_emission = emissions[start_ix: start_ix + length]
             tail_lengths.append(tail_length_helpers.get_tail_length_from_emissions(single_emission, options.TWOSTATE))
             start_ix += length
-
+        #     if i == FinalIdentifier:
+        #         print("ID found, line 2:")
+        #         print(start_ix)
+        #         print(length)
+        #         print(single_emission)
+        # if '1101:13993:2125' in ids:
+        #     print("ID found, line 3:")
+        #     print(tail_lengths[ids.index('1101:13993:2125')]) 
         return ids, tail_lengths
 
     # read in signals as chunks and calculate viterbi emissions

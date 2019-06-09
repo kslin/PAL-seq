@@ -61,7 +61,12 @@ def get_tail_length_from_emissions(emit, twostate):
     return end - start
 
 def smooth(signal):
-    f64Signal = np.array(signal[1:]).astype(np.float)
+    """
+    Modified to smooth only after the tail starts.
+    TJE 2019 06 09 
+    """
+    tail_starts = int(signal[1])
+    f64Signal = np.array(signal[(2 + tail_starts):]).astype(np.float)
     f64SignalFilt = ss.medfilt(f64Signal,11)
-    strSignalFilt = np.insert(f64SignalFilt.astype(str),0,signal[0])
+    strSignalFilt = np.insert(f64SignalFilt.astype(str),0,signal[0:(2 + tail_starts)])
     return strSignalFilt
