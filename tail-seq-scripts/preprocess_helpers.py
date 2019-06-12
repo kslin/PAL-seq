@@ -137,8 +137,9 @@ def parse_read2(fastq2, keep_dict, outdir, softClippingDict, qual_filter = True)
         r = regex.compile('(%s){e<=2}' % 'TTTTTTTTTTT')
 
     elif config.TRIM_BASES == 4:
-        strMove = 20 
-        r = regex.compile('(%s){e<=1}' % 'TTTTTTTTTTTTTTTTTTTT') #20 for this. 
+        strMove = 30
+        ## SHOULD BE: If there are >= 30 As and Ts, 
+        # r = regex.compile('(%s){e<=1}' % ('T'*strMove)) #30 for this. 
 
 
     for line in fastq2:
@@ -149,45 +150,50 @@ def parse_read2(fastq2, keep_dict, outdir, softClippingDict, qual_filter = True)
             read_ID = config.fastq_header_to_ID(line[1:])
         elif line_counter == 1:
             seq = line[config.TRIM_BASES:] #In a splint run, this is 0. In a direct lig run, this is 4. 
-
-            if read_ID in keep_dict:
-
-                # pass if basecaller confused about more than 2 bases in first 25 nucleotides
-                if qual_filter and seq[:25].count('N') >= 2:
-                    dropped_read2.append([read_ID, 'low_qual_read2'])
-                else:
-                    # look for at least 11 contiguous T's in first 30 nucleotides, allowing 1 error
-                    match = r.search(seq[:(30)]) #changes this to two mismatches if low_qual allowed.  
-                    # if found, keep the ID and where the tail starts
-                    if match is not None:
-                        match_start = match.start() + config.TRIM_BASES #CHANGED TJE 2019 06 03
-                        seq = match_start + config.TRIM_BASES #Remove the first x nt
-                        new_keep_dict[read_ID] = (keep_dict[read_ID], match_start)
-
-                    # otherwise manually call tail if read starts with >= 4 contiguous T's
-                    elif read_ID in softClippingDict and softClippingDict[read_ID] <= 4: #If no soft clipping, no tail.
-                        dropped_read2.append([read_ID, 'no_tail'])
-                    else: #There either is soft clipping or the read2 isn't mapped. 
-                        #List of tuples nt then count
-                        firstBasesList = [[k, len(list(g))] for k, g in groupby(seq[0:(10 + strMove)])]
-                        if firstBasesList[0][0] == 'T':
-                            TL = firstBasesList[0][1]
-                            short_tail_outfile.write('{}\t{}\n'.format(read_ID, TL))
-                            num_short_tails += 1
-
-                        elif len(firstBasesList) > 1 and firstBasesList[0][0] == 'A' and firstBasesList[1][0] == 'T': #uridylation
-                            TL = firstBasesList[1][1] #Just the number of Ts
-                            short_tail_outfile.write('{}\t{}\n'.format(read_ID, TL))
-                            num_short_tails += 1
-
-                        elif len(firstBasesList) > 1 and firstBasesList[0][1] <= 2 and firstBasesList[1][0] == 'T': #allow guanylation for fewer than 2 Gs.
-                            TL = firstBasesList[1][1] #Just the number of Ts
-                            short_tail_outfile.write('{}\t{}\n'.format(read_ID, TL))
-                            num_short_tails += 1
-                        else:
-                            dropped_read2.append([read_ID, 'no_tail'])
-
         line_counter = (line_counter + 1) % 4
+        if read_ID not in keep_dict: continue
+        # pass if basecaller confused about more than 2 bases in first 25 nucleotides
+        if qual_filter and seq[:25].count('N') >= 2:
+            dropped_read2.append([read_ID, 'low_qual_read2'])
+        else:
+            for i in range(0,11):
+                r = regex.compile('(%s){e<=1}' % ('A'*(i) + 'T'*(strMove - i))) #3
+                # look for at least 11 contiguous T's in first 30 nucleotides, allowing 1 er
+                match = r.search(seq[:30]) #changes this to two mismatches if low_qual allow
+                # if found, keep the ID and where the tail starts
+                if match is not None:
+                    match_start = match.start() + config.TRIM_BASES + i#CHANGED TJE 2019 06 03
+                    if seq[match_start] != 'T': match_start += 1 #if error is first pos.
+                    if seq[match_start] != 'T': print("Error with starting position.")
+                    new_keep_dict[read_ID] = (keep_dict[read_ID], match_start)
+                    break #none of the next statements will be evaluated.
+
+            # otherwise manually call tail if read starts with >= 4 contiguous T's
+            else:
+                if read_ID in softClippingDict and softClippingDict[read_ID] <= 4: #If no soft clipping, no tail.
+                    dropped_read2.append([read_ID, 'no_tail'])
+                elif read_ID in softClippingDict: #There is soft clipping and read2 is mapped. 
+                    #List of tuples nt then count
+                    firstBasesList = [[k, len(list(g))] for k, g in groupby(seq[0:(10 + strMove)])]
+                    if firstBasesList[0][0] == 'T':
+                        TL = firstBasesList[0][1]
+                        short_tail_outfile.write('{}\t{}\n'.format(read_ID, TL))
+                        num_short_tails += 1
+                    elif len(firstBasesList) > 1 and firstBasesList[0][0] == 'A' and firstBasesList[1][0] == 'T': #uridylation
+                        TL = firstBasesList[1][1] #Just the number of Ts
+                        short_tail_outfile.write('{}\t{}\n'.format(read_ID, TL))
+                        num_short_tails += 1
+                    elif len(firstBasesList) > 1 and firstBasesList[0][1] <= 2 and firstBasesList[1][0] == 'T': #allow guanylation for fewer than 2 Gs.
+                        TL = firstBasesList[1][1] #Just the number of Ts
+                        short_tail_outfile.write('{}\t{}\n'.format(read_ID, TL))
+                        num_short_tails += 1
+                    #look for tails >= 8 and <19 nt anywhere, no mismatches, must be soft clipped. 
+                    for i in range(19,7,-1):
+                        query = ('T'*i)
+                        if query in seq[:30] and softClippingDict[read_ID] - 4 == (len(query) + seq[:30].index(query)):
+                            short_tail_outfile.write('{}\t{}\n'.format(read_ID, i))
+                            break
+                    else: dropped_read2.append([read_ID, 'no_tail'])
 
     short_tail_outfile.close()
     return new_keep_dict, dropped_read2, num_short_tails
