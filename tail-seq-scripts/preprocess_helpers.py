@@ -151,7 +151,7 @@ def parse_read2(fastq2, keep_dict, outdir, softClippingDict, qual_filter = True)
         elif line_counter == 1:
             seq = line[config.TRIM_BASES:] #In a splint run, this is 0. In a direct lig run, this is 4. 
         line_counter = (line_counter + 1) % 4
-        if read_ID not in keep_dict: continue
+        if line_counter != 0 or read_ID not in keep_dict: continue
         # pass if basecaller confused about more than 2 bases in first 25 nucleotides
         if qual_filter and seq[:25].count('N') >= 2:
             dropped_read2.append([read_ID, 'low_qual_read2'])
