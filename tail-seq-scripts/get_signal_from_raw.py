@@ -6,7 +6,7 @@ import time
 import sys
 import tarfile
 import gzip
-
+import pdb
 import numpy as np
 import pandas as pd
 
@@ -101,8 +101,7 @@ if __name__ == '__main__':
         fastq2open=fastq2Tarfile.extractfile(fastq2Tarfile.next())
 
     softClippingDict = preprocess_helpers.parse_read2_BAM(options.OUTDIR)
-
-    keep_dict, dropped_read2, num_short_tails = preprocess_helpers.parse_read2(fastq2open, keep_dict, options.OUTDIR, softClippingDict, config.QUAL)
+    keep_dict, dropped_read2, num_short_tails = preprocess_helpers.parse_read2(fastq2open, keep_dict, options.OUTDIR, softClippingDict, standard_reads, config.QUAL)
     fastq2open.close()
 
 

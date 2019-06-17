@@ -43,8 +43,10 @@ def get_normalized_intensities(intensities, read1_sequence):
         raise ValueError("Read1 length must equal config.LEN1")
 
     # convert read1_sequence into one-hot encoding of 4 bits
-    read1_sequence = np.array([[float(nt == x) for x in config.NUC_ORDER] for nt in read1_sequence])
-
+    ## Changed on 2019 06 13
+    # read1_sequence = np.array([[float(nt == x) for x in config.NUC_ORDER] for nt in read1_sequence])
+    read1_sequence = np.array([[float(nt != x) for x in config.NUC_ORDER] for nt in read1_sequence])
+    
     # add up the counts for each nucleotide
     read1_nt_counts = np.sum(read1_sequence, axis=0)
 
@@ -71,7 +73,6 @@ def get_normalized_intensities(intensities, read1_sequence):
 
     # divide read2 intensities by normalization values
     read2_intensities_normed = np.divide(read2_intensities, norm_vals)
-
     return read2_intensities_normed
 
 
