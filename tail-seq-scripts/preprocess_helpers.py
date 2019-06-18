@@ -167,6 +167,7 @@ def parse_read2(fastq2, keep_dict, outdir, softClippingDict, standard_reads, qua
     strMove = 30 #What is the thershold for going into the HMM?
 
     for line in fastq2:
+        # Parse the fastq
         line = line.decode("utf-8")
         total_lines += 1
         # if total_lines % 1000 == 0: print("lines processed: %s"%(total_lines))

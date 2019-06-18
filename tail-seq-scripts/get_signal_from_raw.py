@@ -10,7 +10,7 @@ import pdb
 import numpy as np
 import pandas as pd
 
-import config, preprocess_helpers_testing, get_signal_helpers
+import config, preprocess_helpers, get_signal_helpers
 
 
 if __name__ == '__main__':
@@ -39,7 +39,7 @@ if __name__ == '__main__':
     # dedup bed input and write dropped reads
     bed_output = pd.read_csv(bedfile, sep='\t', header=None, usecols=[0,1,2,3,18,20], engine='c')
     bed_output[3] = [config.fastq_header_to_ID(x) for x in bed_output[3]]
-    reads_dedup, dropped_reads = preprocess_helpers_testing.dedup_bed(bed_output)
+    reads_dedup, dropped_reads = preprocess_helpers.dedup_bed(bed_output)
 
     # start writing dropped reads
     dropped_reads_outfile = open(os.path.join(options.OUTDIR, 'dropped_reads.txt'), 'w')
@@ -61,7 +61,7 @@ if __name__ == '__main__':
     else:
         if options.STRAND == "S":
             standards = pd.read_csv(options.STANDARDS, sep='\t', header=None)
-            standard_dict = {preprocess_helpers_testing.reverse_complement(x):y for (x,y) in zip(standards[0], standards[1])}
+            standard_dict = {preprocess_helpers.reverse_complement(x):y for (x,y) in zip(standards[0], standards[1])}
         elif options.STRAND == "s": #added parsing for standard strandedness here
             standards = pd.read_csv(options.STANDARDS, sep='\t', header=None)
             standard_dict = {x:y for (x,y) in zip(standards[0], standards[1])}
@@ -79,7 +79,7 @@ if __name__ == '__main__':
         fastq1open=fastq1Tarfile.extractfile(fastq1Tarfile.next())
     
 
-    keep_dict, standard_reads = preprocess_helpers_testing.parse_read1(fastq1open, keep_dict, standard_dict)
+    keep_dict, standard_reads = preprocess_helpers.parse_read1(fastq1open, keep_dict, standard_dict)
     fastq1open.close()
 
     # write table of read_IDs, 3p ends, accession IDs
@@ -100,8 +100,8 @@ if __name__ == '__main__':
         fastq2Tarfile=tarfile.open(name=options.FASTQ2, mode='r:gz')
         fastq2open=fastq2Tarfile.extractfile(fastq2Tarfile.next())
 
-    softClippingDict = preprocess_helpers_testing.parse_read2_BAM(options.OUTDIR)
-    keep_dict, dropped_read2, num_short_tails = preprocess_helpers_testing.parse_read2(fastq2open, keep_dict, options.OUTDIR, softClippingDict, standard_reads, config.QUAL)
+    softClippingDict = preprocess_helpers.parse_read2_BAM(options.OUTDIR)
+    keep_dict, dropped_read2, num_short_tails = preprocess_helpers.parse_read2(fastq2open, keep_dict, options.OUTDIR, softClippingDict, standard_reads, config.QUAL)
     fastq2open.close()
 
 
@@ -115,10 +115,10 @@ if __name__ == '__main__':
     t0 = time.time()
     
 
-    # keep_dict = {'1101:9021:2000#TAGTGC': (preprocess_helpers_testing.reverse_complement('ACCAAAAATCTGTCACAGAATTTTGAGACCATTAAAACAAGTTTAATGAN'), 0),
-    #              '1101:9793:1998#TAGTGC': (preprocess_helpers_testing.reverse_complement('GGCTGGCCTGTACACTGACTTGAGACCAATAAAAGTGCACACCTTACCTN'), 0),
-    #              '1101:16455:1995#TAGTGC': (preprocess_helpers_testing.reverse_complement('CCCTAAAATTGGTTTCAAGCCAATCTCATATCCTATATGTCTTTCTCAAN'), 0), 
-    #              '1101:16631:1996#TAGTGC': (preprocess_helpers_testing.reverse_complement('CGGCTGTGGGAATGAATCATTGAAGTAATAAACTACAGTGGTTGATCCAN'), 0)}
+    # keep_dict = {'1101:9021:2000#TAGTGC': (preprocess_helpers.reverse_complement('ACCAAAAATCTGTCACAGAATTTTGAGACCATTAAAACAAGTTTAATGAN'), 0),
+    #              '1101:9793:1998#TAGTGC': (preprocess_helpers.reverse_complement('GGCTGGCCTGTACACTGACTTGAGACCAATAAAAGTGCACACCTTACCTN'), 0),
+    #              '1101:16455:1995#TAGTGC': (preprocess_helpers.reverse_complement('CCCTAAAATTGGTTTCAAGCCAATCTCATATCCTATATGTCTTTCTCAAN'), 0), 
+    #              '1101:16631:1996#TAGTGC': (preprocess_helpers.reverse_complement('CGGCTGTGGGAATGAATCATTGAAGTAATAAACTACAGTGGTTGATCCAN'), 0)}
 
 
     # pickle.dump(keep_dict, open(os.path.join(options.OUTDIR, 'keep_dict.pickle'), "w"))
