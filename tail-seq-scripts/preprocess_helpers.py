@@ -185,7 +185,7 @@ def parse_read2(fastq2, keep_dict, outdir, softClippingDict, standard_reads, qua
             dropped_read2.append([read_ID, 'low_qual_read2'])
             continue
 
-        if read_ID not in softClippingDict or read_ID in standards: #Reads are called by the HMM.
+        if read_ID not in softClippingDict: #Reads are called by the HMM, including standards.
             r = regex.compile('(%s){e<=1}' % ('T'*12))
             match = r.search(seq[:30])
             if match is not None: #Where does the tail start?
@@ -194,6 +194,11 @@ def parse_read2(fastq2, keep_dict, outdir, softClippingDict, standard_reads, qua
                 if seq[match_start] != 'T': print("Error with starting position.")
                 match_start = match_start + config.TRIM_BASES 
                 new_keep_dict[read_ID] = (keep_dict[read_ID], match_start)
+
+            elif read_ID in standards: #mostly for the 10mer. 
+                new_keep_dict[read_ID] = (keep_dict[read_ID], config.TRIM_BASES)
+
+            else: dropped_read2.append([read_ID, 'no_tail_unmapped_read2']) #new designation as of 2019 06 18
 
         else: #Call the tail manually
             TL = process_short(seq,softClippingDict[read_ID] - config.TRIM_BASES)
