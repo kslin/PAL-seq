@@ -201,8 +201,8 @@ def calculate_intensities(intensity_file, keep_dict, outdir, num_processes):
     ix = 0
     line_num = 0
 
-    if intensity_file[-3:] == ".gz": infile = gzip.open(intensity_file, 'rt')#is the intensity file .gz?
-    elif intensity_file[-4:] == ".txt": infile = open(intensity_file, 'r'): #not a gzipped file
+    if intensity_file[-3:] == ".gz": infile = gzip.open(intensity_file, 'rt') #is the intensity file .gz?
+    elif intensity_file[-4:] == ".txt": infile = open(intensity_file, 'r') #not a gzipped file
     else: raise ValueError("Intensity file does not end in .gz or .txt")
     for line in infile:
         line = line.split()

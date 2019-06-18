@@ -19,8 +19,8 @@ clipNo?=0
 ifeq (${DataType}, PALseq)
 	strand=S
 	state=True
-# 	readCommand=tar xzfO #Note that this must be set along with the same argument in the config file.
-	readCommand=zcat #Note that this must be set along with the same argument in the config file.
+	readCommand=tar xzfO #Note that this must be set along with the same argument in the config file.
+# 	readCommand=zcat #Note that this must be set along with the same argument in the config file.
 
 else
 	strand=s
