@@ -201,7 +201,7 @@ def parse_read2(fastq2, keep_dict, outdir, softClippingDict, standard_reads, qua
                         for i in range(19,7,-1):
                             query = ('T'*i)
                             #This next line requires that the read needs to be soft clipped by at least 3 nt (a 5 nt untemplated tail).
-                            if query in seq[:30] and softClippingDict[read_ID] - 4 >= seq[:30].index(query) + 6:
+                            if query in seq[:30] and softClippingDict[read_ID] - config.TRIM_BASES >= seq[:30].index(query) + 6:
                                 short_tail_outfile.write('{}\t{}\n'.format(read_ID, i))
                                 break
                         else: dropped_read2.append([read_ID, 'no_tail'])
