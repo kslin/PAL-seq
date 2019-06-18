@@ -112,6 +112,38 @@ def parse_read1(fastq1, keep_dict, standard_dict):
     return new_keep_dict, standard_reads
 
 
+def process_short(seq, softClipping):
+    """Parse a short-read sequence, taking into account the number of nucleotides of soft-clipping.
+    
+    Arguments:
+        sequence, softclipping number, already adjusted for the random nucleotides of the 3p adapter.
+    
+    Outputs the tail length    
+    """
+    firstBasesList = [[k, len(list(g))] for k, g in groupby(seq)] #list of tuples (nucleotide: count)
+    
+    if firstBasesList[0][0] == 'T': #read has a tail, begins with T
+        TL = firstBasesList[0][1]
+    
+    elif len(firstBasesList) == 1: TL = 0
+    
+    #allow G/C for fewer than 2 Gs or Cs or and As.
+    elif firstBasesList[1][0] == 'T' and (firstBasesList[0][0] == 'A' or firstBasesList[0][1] <= 2): 
+        #These next two lines require that at least all non-T nt prior to the T stretch be soft clipped
+        if softClipping >= firstBasesList[0][1]: TL = firstBasesList[1][1] #Just the number of Ts
+        else: TL = 0
+
+    else:
+        for i in range(19,7,-1):
+            query = ('T'*i)
+            #This next line requires that the read needs to be soft clipped by at least 3 nt (a 5 nt untemplated tail).
+            if query in seq[:30] and softClipping >= seq[:30].index(query) + 6:
+                TL = i
+                break
+        else: TL = 0
+   
+    return(TL)
+
 def parse_read2(fastq2, keep_dict, outdir, softClippingDict, standard_reads, qual_filter = True):
     """Parse fastq2 file, filter low quality or very short tails.
     Manually call tails between 4 and 9 nucleotides (inclusive).
@@ -134,16 +166,6 @@ def parse_read2(fastq2, keep_dict, outdir, softClippingDict, standard_reads, qua
     total_lines = 0
     strMove = 30 #What is the thershold for going into the HMM?
 
-    # if qual_filter and config.TRIM_BASES != 4: 
-        # r = regex.compile('(%s){e<=1}' % 'TTTTTTTTTTT')
-
-    # elif not qual_filter and config.TRIM_BASES != 4: 
-        # r = regex.compile('(%s){e<=2}' % 'TTTTTTTTTTT')
-
-    # elif config.TRIM_BASES == 4:
-        # SHOULD BE: If there are >= 30 As and Ts, 
-        # r = regex.compile('(%s){e<=1}' % ('T'*strMove)) #30 for this. 
-
     for line in fastq2:
         line = line.decode("utf-8")
         total_lines += 1
@@ -156,90 +178,28 @@ def parse_read2(fastq2, keep_dict, outdir, softClippingDict, standard_reads, qua
             seq = line[config.TRIM_BASES:] #In a splint run, this is 0. In a direct lig run, this is 4. 
         line_counter = (line_counter + 1) % 4
         if line_counter != 0 or read_ID not in keep_dict: continue
+
         # pass if basecaller confused about more than 2 bases in first 25 nucleotides
         if qual_filter and seq[:25].count('N') >= 2:
             dropped_read2.append([read_ID, 'low_qual_read2'])
+            continue
 
-        else:
-            for i in range(0,11):
-                r = regex.compile('(%s){e<=1}' % ('A'*(i) + 'T'*(strMove - i))) #3
-                # look for at least 11 contiguous T's in first 30 nucleotides, allowing 1 er
-                match = r.search(seq[:30]) #changes this to two mismatches if low_qual allow
-                # if found, keep the ID and where the tail starts
-                if match is not None:
-                    match_start = match.start() + i #CHANGED TJE 2019 06 14
-                    if seq[match_start] != 'T': match_start += 1 #if error is first pos.
-                    if seq[match_start] != 'T': print("Error with starting position.")
-                    match_start = match_start + config.TRIM_BASES #CHANGED TJE 2019 06 14
-                    new_keep_dict[read_ID] = (keep_dict[read_ID], match_start)
-                    break #none of the next statements will be evaluated.
-            else: 
-                if read_ID in softClippingDict:
-                    #All of these reads are in the Read2STAR aligned file.
-                    # if read_ID == '1207:14335:91178': pdb.set_trace()
+        if read_ID not in softClippingDict or read_ID in standards: #Reads are called by the HMM.
+            r = regex.compile('(%s){e<=1}' % ('T'*12))
+            match = r.search(seq[:30])
+            if match is not None: #Where does the tail start?
+                match_start = match.start()
+                if seq[match_start] != 'T': match_start += 1 #if error is first pos.
+                if seq[match_start] != 'T': print("Error with starting position.")
+                match_start = match_start + config.TRIM_BASES 
+                new_keep_dict[read_ID] = (keep_dict[read_ID], match_start)
 
-                    #### These next two lines used to remove things that ended in tails if they matched the genome.
-                    # if softClippingDict[read_ID] <= 4: #If no soft clipping, no tail.
-                    #     dropped_read2.append([read_ID, 'no_tail'])
-                    # else: #There is soft clipping and read2 is mapped. 
-                    #     #List of tuples nt then count
-                    firstBasesList = [[k, len(list(g))] for k, g in groupby(seq)]
-                    if firstBasesList[0][0] == 'T':
-                        TL = firstBasesList[0][1]
-                        short_tail_outfile.write('{}\t{}\n'.format(read_ID, TL))
-                        num_short_tails += 1
-                    elif len(firstBasesList) > 1 and firstBasesList[0][0] == 'A' and firstBasesList[1][0] == 'T': #uridylation
-                        TL = firstBasesList[1][1] #Just the number of Ts
-                        short_tail_outfile.write('{}\t{}\n'.format(read_ID, TL))
-                        num_short_tails += 1
-                    elif len(firstBasesList) > 1 and firstBasesList[0][1] <= 2 and firstBasesList[1][0] == 'T': #allow guanylation for fewer than 2 Gs.
-                        TL = firstBasesList[1][1] #Just the number of Ts
-                        short_tail_outfile.write('{}\t{}\n'.format(read_ID, TL))
-                        num_short_tails += 1
-                    #look for tails >= 8 and <19 nt anywhere, no mismatches, must be soft clipped. 
-                    else:
-                        for i in range(19,7,-1):
-                            query = ('T'*i)
-                            #This next line requires that the read needs to be soft clipped by at least 3 nt (a 5 nt untemplated tail).
-                            if query in seq[:30] and softClippingDict[read_ID] - config.TRIM_BASES >= seq[:30].index(query) + 6:
-                                short_tail_outfile.write('{}\t{}\n'.format(read_ID, i))
-                                break
-                        else: dropped_read2.append([read_ID, 'no_tail'])
-                #Standards, not going to be in the soft clipped dict.
-                elif read_ID in standards:
-                    #All of these reads are in the Read2STAR aligned file.
-                    # if read_ID == '1207:14335:91178': pdb.set_trace()
-                    firstBasesList = [[k, len(list(g))] for k, g in groupby(seq)]
-                    if firstBasesList[0][0] == 'T':
-                        TL = firstBasesList[0][1]
-                        short_tail_outfile.write('{}\t{}\n'.format(read_ID, TL))
-                        num_short_tails += 1
-                    elif len(firstBasesList) > 1 and firstBasesList[0][0] == 'A' and firstBasesList[1][0] == 'T': #uridylation
-                        TL = firstBasesList[1][1] #Just the number of Ts
-                        short_tail_outfile.write('{}\t{}\n'.format(read_ID, TL))
-                        num_short_tails += 1
-                    elif len(firstBasesList) > 1 and firstBasesList[0][1] <= 2 and firstBasesList[1][0] == 'T': #allow guanylation for fewer than 2 Gs.
-                        TL = firstBasesList[1][1] #Just the number of Ts
-                        short_tail_outfile.write('{}\t{}\n'.format(read_ID, TL))
-                        num_short_tails += 1
-                    #look for tails >= 8 and <19 nt anywhere, no mismatches, doesn't need soft clipping as standard. 
-                    else:
-                        for i in range(19,7,-1):
-                            query = ('T'*i)
-                            if query in seq[:30]:
-                                short_tail_outfile.write('{}\t{}\n'.format(read_ID, i))
-                                break
-                        else: dropped_read2.append([read_ID, 'no_tail'])
-                else:
-                    #This statment looks for the original definition of a tail as implemented by SWE in the case that read2 doesn't map
-                    #These reads are funneled to the HMM
-                    r = regex.compile('(%s){e<=1}' % ('T'*12))
-                    match = r.search(seq[:30])
-                    if match is not None:
-                        match_start = match.start()
-                        if seq[match_start] != 'T': match_start += 1 #if error is first pos.
-                        if seq[match_start] != 'T': print("Error with starting position.")
-                        match_start = match_start + config.TRIM_BASES 
-                        new_keep_dict[read_ID] = (keep_dict[read_ID], match_start)
+        else: #Call the tail manually
+            TL = process_short(seq,softClippingDict[read_ID] - config.TRIM_BASES)
+            if TL != 0: 
+                short_tail_outfile.write('{}\t{}\n'.format(read_ID, TL))
+                num_short_tails += 1
+            else: dropped_read2.append([read_ID, 'no_tail'])
+
     short_tail_outfile.close()
     return new_keep_dict, dropped_read2, num_short_tails
