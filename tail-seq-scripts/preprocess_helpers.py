@@ -63,8 +63,8 @@ def parse_read2_BAM(outdir):
             softClipping = read.cigartuples[-1][1] #cigar identifiers for soft clipping. 
         elif read.flag == 163: #not rc read 2. 
             softClipping = read.cigartuples[0][1]
-        elif read.flag != 99 and read.flag != 83:
-            raise ValueError("Additional paired end flags found.")
+        elif read.flag == 99 or read.flag == 83: continue
+        else: raise ValueError("Additional paired end flags found.")
         read_ID = read.query_name
         tlen = abs(read.template_length)
         if tlen <= 100: softClippingDict[read_ID] = softClipping
