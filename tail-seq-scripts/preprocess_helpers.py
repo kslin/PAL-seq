@@ -56,18 +56,18 @@ def parse_read2_BAM(outdir):
         unopened outdir
     """
     sam = pysam.AlignmentFile(os.path.join(outdir, 'Read2STAR_Aligned.sortedByCoord.out.bam'), "rb")
-    # sam = pysam.AlignmentFile(os.path.join(outdir, 'A10ShortTailA100.bam'), "rb")
+
     softClippingDict = {}
     for read in sam:
-        read_ID = config.fastq_header_to_ID(read.query_name)
-        if read.flag & 16 == 16: 
-            # seqRaw = reverse_complement(read.seq) #extract the strand from the bitwise operator.
+        if read.flag == 147: #reverse complemented read 2
             softClipping = read.cigartuples[-1][1] #cigar identifiers for soft clipping. 
-        else: 
-            # seqRaw =  read.seq
+        elif read.flag == 163: #not rc read 2. 
             softClipping = read.cigartuples[0][1]
-        softClippingDict[read_ID] = softClipping
-
+        elif read.flag != 99 and read.flag != 83:
+            raise ValueError("Additional paired end flags found.")
+        read_ID = read.query_name
+        tlen = abs(read.template_length)
+        if tlen <= 100: softClippingDict[read_ID] = softClipping
     return(softClippingDict)
 
 def parse_read1(fastq1, keep_dict, standard_dict):
@@ -185,7 +185,7 @@ def parse_read2(fastq2, keep_dict, outdir, softClippingDict, standard_reads, qua
             dropped_read2.append([read_ID, 'low_qual_read2'])
             continue
 
-        if read_ID not in softClippingDict: #Reads are called by the HMM, including standards.
+        if read_ID not in softClippingDict or (('T'*30) in seq): #Reads are called by the HMM, including standards.
             r = regex.compile('(%s){e<=1}' % ('T'*12))
             match = r.search(seq[:30])
             if match is not None: #Where does the tail start?

@@ -78,7 +78,7 @@ if __name__ == '__main__':
         fastq1Tarfile=tarfile.open(name=options.FASTQ1, mode='r:gz')
         fastq1open=fastq1Tarfile.extractfile(fastq1Tarfile.next())
     
-
+    softClippingDict = preprocess_helpers.parse_read2_BAM(options.OUTDIR)
     keep_dict, standard_reads = preprocess_helpers.parse_read1(fastq1open, keep_dict, standard_dict)
     fastq1open.close()
 
@@ -100,7 +100,6 @@ if __name__ == '__main__':
         fastq2Tarfile=tarfile.open(name=options.FASTQ2, mode='r:gz')
         fastq2open=fastq2Tarfile.extractfile(fastq2Tarfile.next())
 
-    softClippingDict = preprocess_helpers.parse_read2_BAM(options.OUTDIR)
     keep_dict, dropped_read2, num_short_tails = preprocess_helpers.parse_read2(fastq2open, keep_dict, options.OUTDIR, softClippingDict, standard_reads, config.QUAL)
     fastq2open.close()
 
