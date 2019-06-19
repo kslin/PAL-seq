@@ -79,6 +79,8 @@ if __name__ == '__main__':
         fastq1open=fastq1Tarfile.extractfile(fastq1Tarfile.next())
     
     softClippingDict = preprocess_helpers.parse_read2_BAM(options.OUTDIR)
+    logfile.write('Length of paired end mapping reads, filtered:\t{}\n'.format(len(softClippingDict)))
+
     keep_dict, standard_reads = preprocess_helpers.parse_read1(fastq1open, keep_dict, standard_dict)
     fastq1open.close()
 

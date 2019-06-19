@@ -21,7 +21,7 @@ ifeq (${DataType}, PALseq)
 	state=True
 # 	readCommand=tar xzfO #Note that this must be set along with the same argument in the config file.
 	readCommand=zcat #Note that this must be set along with the same argument in the config file.
-	clip5pR2=0
+	clip5pR2=4
 
 else
 	strand=s
@@ -42,16 +42,15 @@ parseArgs:
 
 align-to-genome: ## Align rest of reads to genome and intersect with gff file
 	STAR --genomeDir $(genomeDir) --outSAMtype BAM SortedByCoordinate --outSAMattributes NH HI AS nM jM --alignIntronMax 1 --runThreadN 24 --outFilterMultimapNmax 1 --clip5pNbases ${clipNo} --outFilterMismatchNoverLmax 0.04 --outFilterIntronMotifs RemoveNoncanonicalUnannotated --readFilesCommand $(readCommand) --outSJfilterReads Unique --readFilesIn $(fastq1) $ --outFileNamePrefix $(outdir)/STAR_ > $(outdir)/stdOut_logFile.txt
+	
+	#read2, only 50 nt, clipping the first 4. 
+	STAR --genomeDir $(genomeDir) --outSAMtype BAM SortedByCoordinate --outSAMattributes NH HI AS nM jM --alignIntronMax 1 --runThreadN 24 --outFilterMultimapNmax 1 --clip5pNbases ${clip5pR2} --clip3pNbases 200 --outFilterMismatchNoverLmax 0.04 --outFilterIntronMotifs RemoveNoncanonicalUnannotated --readFilesCommand $(readCommand) --outSJfilterReads Unique --readFilesIn $(fastq2) --outFileNamePrefix $(outdir)/Read2STAR_ > $(outdir)/stdOut_logFile_read2.txt
 
-	#uncompress, trim, revcomp fastq files for read2 alignment. 
-	$(readCommand) $(fastq1) | fastx_reverse_complement > $(outdir)/FASTQ1REVCOMP.txt
-	$(readCommand) $(fastq2) | cutadapt --cores=0 -u -200 -u $(clip5pR2) - > $(outdir)/FASTQ2TRIM.txt
 
-	STAR --genomeDir $(genomeDir) --outSAMtype BAM SortedByCoordinate --outSAMattributes NH HI AS nM jM --alignIntronMax 1 --runThreadN 24 --outFilterMultimapNmax 1 --outFilterMismatchNoverLmax 0.04 --outFilterIntronMotifs RemoveNoncanonicalUnannotated --outSJfilterReads Unique --readFilesIn $(outdir)/FASTQ1REVCOMP.txt $(outdir)/FASTQ2TRIM.txt --outFileNamePrefix $(outdir)/Read2STAR_ > $(outdir)/stdOut_logFile_read2.txt
 
 intersect-gff:
 	bedtools intersect -abam $(outdir)/STAR_Aligned.sortedByCoord.out.bam -b $(gff) -bed -wb -wa -${strand} > $(outdir)/read1.bed
-# 	bedtools intersect -abam $(outdir)/Read2STAR_Aligned.sortedByCoord.out.bam -b $(gff) -bed -wb -wa -${strand} > $(outdir)/read2.bed
+	bedtools intersect -abam $(outdir)/Read2STAR_Aligned.sortedByCoord.out.bam -b $(gff) -bed -wb -wa -${strand} > $(outdir)/read2.bed
 
 signal-from-raw: ## Extract intensities for mapping reads and calculate normalized T-signal
 	python3 /lab/solexa_bartel/teisen/RNAseq/Scripts/PALseqKlinMod/tail-seq-scripts/get_signal_from_raw.py --f1 $(fastq1) --f2 $(fastq2) -i $(intensity) -s $(standard_file) -o $(outdir) --strand ${strand}
