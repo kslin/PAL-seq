@@ -54,7 +54,7 @@ def parse_read2_BAM(outdir):
     Arguments:
         unopened outdir
     """
-    sam = pysam.AlignmentFile(os.path.join(outdir, 'Read2STAR_Aligned.sortedByCoord.out.bam'), "rb")
+    sam = pysam.AlignmentFile(os.path.join(outdir, 'Read2Filtered_STAR_Aligned.sortedByCoord.out.bam'), "rb")
     softClippingDict = {}
     for read in sam:
         read_ID = config.fastq_header_to_ID(read.query_name)
