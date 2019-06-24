@@ -31,14 +31,19 @@ def get_normalized_intensities(intensities, read1_sequence):
 
     # skip the number of starting nucleotides specified in the config file
     try:
+        # intensities = np.vstack((intensities[config.NUM_SKIP:config.NUM_SKIP_2,:],intensities[-1 * config.LEN2:,:]))
+        # read1_sequence = read1_sequence[config.NUM_SKIP:config.NUM_SKIP_2]
+
         intensities = intensities[config.NUM_SKIP:,:]
         read1_sequence = read1_sequence[config.NUM_SKIP:]
     except:
-        print("Intensities and sequences for read1 must be longer than config.NUM_SKIP")
+        raise ValueError("Intensities and sequences for read1 must be longer than config.NUM_SKIP")
 
+    # if len(intensities) != (config.LEN1 + config.LEN2 - config.NUM_SKIP - config.NUM_SKIP_2):
     if len(intensities) != (config.LEN1 + config.LEN2 - config.NUM_SKIP):
         raise ValueError("Intensities length not equal to config.LEN1 + config.LEN2")
 
+    # if len(read1_sequence) != (config.LEN1 - config.NUM_SKIP - config.NUM_SKIP_2):
     if len(read1_sequence) != (config.LEN1 - config.NUM_SKIP):
         raise ValueError("Read1 length must equal config.LEN1")
 
@@ -55,6 +60,7 @@ def get_normalized_intensities(intensities, read1_sequence):
         return None
 
     # convert intensities to an array and split into read1 and read2 intensities
+    # read1_intensities = intensities[:config.LEN1 - config.NUM_SKIP - config.NUM_SKIP_2] ##I think it's this line.
     read1_intensities = intensities[:config.LEN1 - config.NUM_SKIP]
     read2_intensities = intensities[-1 * config.LEN2:]
 
