@@ -49,7 +49,7 @@ signal-plot: ## Plot T-signal density
 	python tail-seq-scripts/plot_t_signals.py -o $(outdir) -b 100
 
 tail-seq: ## Train and run HMM for calling tail lengths
-	python tail-seq-scripts/tail_length_hmm.py -o $(outdir) --twostate ${state}
+	python tail-seq-scripts/tail_length_hmm.py -o $(outdir) --twostate ${state} --futures 24
 
 summary: ## Aggregate individual tail lengths by accession and plot standards
 	python tail-seq-scripts/summarize_results.py -o $(outdir)
