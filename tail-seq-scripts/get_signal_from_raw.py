@@ -6,7 +6,7 @@ import time
 import sys
 import tarfile
 import gzip
-
+import pdb
 import numpy as np
 import pandas as pd
 
@@ -21,16 +21,15 @@ if __name__ == '__main__':
     parser.add_option("-i", "--intensity", dest="INTENSITY", help="gzipped intensity file for read2")
     parser.add_option("-s","--standards", dest="STANDARDS", default=None, help="file with standard sequences")
     parser.add_option("-o","--outdir", dest="OUTDIR", help="output directory")
-    parser.add_option("--strand", dest="STRAND", help="strand") #added by TJE 20180827
+    parser.add_option("--strand", dest="STRAND", help="Library must be stranded.") #added by TJE 20180827
 
     (options, args) = parser.parse_args()
 
     # if the necesary input file doesn't exist, quit
     bedfile = os.path.join(options.OUTDIR, 'read1.bed')
     if not os.path.exists(bedfile):
-        print("{} does not exist. Run intersectBed first with the same output directory.".format(f))
-        sys.exit()
-
+        raise ValueError("{} does not exist. Run intersectBed first with the same output directory.".format(bedfile))
+        
     # start writing log file
     logfile = open(os.path.join(options.OUTDIR, 'logfile.txt'), 'w')
 
@@ -59,19 +58,29 @@ if __name__ == '__main__':
     # read in standards
     if options.STANDARDS is None:
         standard_dict = {}
-    elif options.STRAND == "S":
-        standards = pd.read_csv(options.STANDARDS, sep='\t', header=None)
-        standard_dict = {preprocess_helpers.reverse_complement(x):y for (x,y) in zip(standards[0], standards[1])}
-    elif options.STRAND == "s": #added parsing for standard strandedness here
-        standards = pd.read_csv(options.STANDARDS, sep='\t', header=None)
-        standard_dict = {x:y for (x,y) in zip(standards[0], standards[1])}
     else:
-        logfile.write("No strandedness flag found.")
+        if options.STRAND == "S":
+            standards = pd.read_csv(options.STANDARDS, sep='\t', header=None)
+            standard_dict = {preprocess_helpers.reverse_complement(x):y for (x,y) in zip(standards[0], standards[1])}
+        elif options.STRAND == "s": #added parsing for standard strandedness here
+            standards = pd.read_csv(options.STANDARDS, sep='\t', header=None)
+            standard_dict = {x:y for (x,y) in zip(standards[0], standards[1])}
+        else:
+            raise ValueError("Strandedness flag must be S or s.")
 
 
     # iterate through read1, separate standards, extract sequences
-    fastq1Tarfile=tarfile.open(name=options.FASTQ1, mode='r:gz')
-    fastq1open=fastq1Tarfile.extractfile(fastq1Tarfile.next())
+    if config.FASTQ_GZIP==True:
+        fastq1open=gzip.open(options.FASTQ1, mode='rb')
+    elif config.FASTQ_GZIP==False:
+        fastq1open=open(name=options.FASTQ1,mode='r')
+    else:
+        fastq1Tarfile=tarfile.open(name=options.FASTQ1, mode='r:gz')
+        fastq1open=fastq1Tarfile.extractfile(fastq1Tarfile.next())
+    
+    softClippingDict = preprocess_helpers.parse_read2_BAM(options.OUTDIR)
+    logfile.write('Length of paired end mapping reads, filtered:\t{}\n'.format(len(softClippingDict)))
+
     keep_dict, standard_reads = preprocess_helpers.parse_read1(fastq1open, keep_dict, standard_dict)
     fastq1open.close()
 
@@ -85,9 +94,15 @@ if __name__ == '__main__':
     t0 = time.time()
 
     # read in read2, separate short tails
-    fastq2Tarfile=tarfile.open(name=options.FASTQ2, mode='r:gz')
-    fastq2open=fastq2Tarfile.extractfile(fastq2Tarfile.next())
-    keep_dict, dropped_read2, num_short_tails = preprocess_helpers.parse_read2(fastq2open, keep_dict, options.OUTDIR, config.QUAL)
+    if config.FASTQ_GZIP==True:
+        fastq2open=gzip.open(options.FASTQ2,mode='rb')
+    elif config.FASTQ_GZIP==False:
+        fastq2open=open(name=options.FASTQ2,mode='r')
+    else:
+        fastq2Tarfile=tarfile.open(name=options.FASTQ2, mode='r:gz')
+        fastq2open=fastq2Tarfile.extractfile(fastq2Tarfile.next())
+
+    keep_dict, dropped_read2, num_short_tails = preprocess_helpers.parse_read2(fastq2open, keep_dict, options.OUTDIR, softClippingDict, standard_reads, config.QUAL)
     fastq2open.close()
 
 
