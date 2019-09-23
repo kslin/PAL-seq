@@ -110,9 +110,9 @@ def parse_read2(fastq2, keep_dict, standard_dict):
     return new_keep_dict, standard_reads
 
 
-def process_short(seq, softClipping):
-    """Parse a short-read sequence, taking into account the number of nucleotides of soft-clipping.
-    
+def process_short(seq, ModReadLength):
+    """Parse a short-read sequence to determine tail length.
+
     Arguments:
         sequence, softclipping number, already adjusted for the random nucleotides of the 3p adapter.
     
@@ -120,29 +120,23 @@ def process_short(seq, softClipping):
     """
     firstBasesList = [[k, len(list(g))] for k, g in groupby(seq)] #list of tuples (nucleotide: count)
     
-    if firstBasesList[0][0] == 'T': #read has a tail, begins with T
+    if firstBasesList[-1][0] == 'T': #read ends with a T
+        TailBeginLength = firstBasesList[-1][1] #The length of the tail to be added to the linear mod
+    else: TailBeginLength = 0
+
+    if firstBasesList[0][0] == 'T': #read begins with a T
         TL = firstBasesList[0][1]
-    
+
     elif len(firstBasesList) == 1: TL = 0
     
     #allow G/C for fewer than 2 Gs or Cs or and As.
     elif firstBasesList[1][0] == 'T' and (firstBasesList[0][0] == 'A' or firstBasesList[0][1] <= 2): 
-        #These next two lines require that at least all non-T nt prior to the T stretch be soft clipped
-        if softClipping >= firstBasesList[0][1]: TL = firstBasesList[1][1] #Just the number of Ts
-        else: TL = 0
-
-    else:
-        for i in range(19,7,-1):
-            query = ('T'*i)
-            #This next line requires that the read needs to be soft clipped by at least 3 nt (a 5 nt untemplated tail).
-            if query in seq[:30] and softClipping >= seq[:30].index(query) + 6:
-                TL = i
-                break
-        else: TL = 0
+        TL = firstBasesList[1][1]
+    else: TL = 0
    
-    return(TL)
+    return(TL, TailBeginLength)
 
-def parse_read1(fastq1, keep_dict, outdir, softClippingDict, standard_reads, qual_filter = True):
+def parse_read1(fastq1, keep_dict, outdir, standard_reads, qual_filter = True):
     """Parse fastq2 file, filter low quality or very short tails.
     Manually call tails between 4 and 9 nucleotides (inclusive).
 
@@ -158,13 +152,12 @@ def parse_read1(fastq1, keep_dict, outdir, softClippingDict, standard_reads, qua
     short_tail_outfile = open(os.path.join(outdir, 'short_tails.txt'), 'w')
     short_tail_outfile.write('read_ID\ttail_length\n')
     num_short_tails = 0
-    dropped_read2 = []
+    dropped_read1 = []
     line_counter = 0
     standards = set(standard_reads['read_ID'].unique())
     total_lines = 0
-    strMove = 30 #What is the thershold for going into the HMM?
 
-    for line in fastq2:
+    for line in fastq1:
         # Parse the fastq
         line = line.decode("utf-8")
         total_lines += 1
@@ -179,31 +172,25 @@ def parse_read1(fastq1, keep_dict, outdir, softClippingDict, standard_reads, qua
         if line_counter != 0 or read_ID not in keep_dict: continue
 
         # pass if basecaller confused about more than 2 bases in first 25 nucleotides
-        if qual_filter and seq[:25].count('N') >= 2:
-            dropped_read2.append([read_ID, 'low_qual_read2'])
+        if qual_filter and seq.count('N') >= 2:
+            dropped_read1.append([read_ID, 'low_qual_read2'])
             continue
 
-        if read_ID not in softClippingDict: #Reads are called by the HMM, including standards.
-            r = regex.compile('(%s){e<=1}' % ('T'*12))
-            match = r.search(seq[:30])
-            if match is not None: #Where does the tail start?
-                match_start = match.start()
-                if seq[match_start] != 'T': match_start += 1 #if error is first pos.
-                if seq[match_start] != 'T': print("Error with starting position.")
-                match_start = match_start + config.TRIM_BASES 
-                new_keep_dict[read_ID] = (keep_dict[read_ID], match_start)
+        TL, TailBeginLength = process_short(seq, config.LEN1 - config.TRIM_BASES)
+        if TailBeginLength != 0: #Ts prior to klenow ext.
+            if read_ID not in standards:
+                new_keep_dict[read_ID] = (keep_dict[read_ID], TailBeginLength)
+            else: #in standards
+                standard_keep_dict[read_ID] = (keep_dict[read_ID], TailBeginLength)
 
-            elif read_ID in standards: #mostly for the 10mer. 
-                new_keep_dict[read_ID] = (keep_dict[read_ID], config.TRIM_BASES)
+        elif read_ID in standards: #mostly for the 10mer. 
+            standard_keep_dict[read_ID] = (keep_dict[read_ID], TL)
+            num_short_tails += 1
 
-            else: dropped_read2.append([read_ID, 'no_tail_unmapped_read2']) #new designation as of 2019 06 18
-
-        else: #Call the tail manually
-            TL = process_short(seq,softClippingDict[read_ID] - config.TRIM_BASES)
-            if TL != 0: 
-                short_tail_outfile.write('{}\t{}\n'.format(read_ID, TL))
-                num_short_tails += 1
-            else: dropped_read2.append([read_ID, 'no_tail'])
-
+        else:
+            short_tail_outfile.write('{}\t{}\n'.format(read_ID, TL))
+            num_short_tails += 1
+            if TL == 0: dropped_read1.append([read_ID, 'no_tail'])
+    
     short_tail_outfile.close()
-    return new_keep_dict, dropped_read2, num_short_tails
+    return new_keep_dict, standard_keep_dict, dropped_read1, num_short_tails

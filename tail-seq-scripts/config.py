@@ -29,7 +29,7 @@ def intensity_line_to_ID(line):
 ### Preprocess run configurations ###
 
 FUTURES = 24 # number of processes, set to 1 if not using multiprocessing
-LEN1, LEN2 = 50, 250 # length of read1 and read2
+LEN1, LEN2 = 26, 40 # length of read1 and read2
 SIGNAL_COL_START = 4 # column in intensity file where intensity values start
 SIGNAL_COL_END = (4*(LEN1 + LEN2)) + 4 # column in intensity file where intensity values end
 NUM_SKIP = 10 # number of nucleotides to skip in read 1 when normalizing intensities USUALLY 10
@@ -41,7 +41,7 @@ NAN_LIMIT = 5 # number of positions with no signal in the intensity file allowed
 QUAL = True #If true, only one mismatch is allowed to call a tail with the first 11 nt being T. Else, two mismatches are allowed. 
 #Gzip status for fastq and intensity files
 FASTQ_GZIP = True #if false, extension is .txt, if True extension is .txt.gz
-TRIM_BASES = 4 #Should be set to 0 for a splint ligation, 4 or 8 for a direct lig run. 
+TRIM_BASES = 14 #??
 # INTENSITY_GZIP = False #if false, extension is .txt, else extension is .txt.gz ##This is handled differently in the get_signal_helpers code
 
 

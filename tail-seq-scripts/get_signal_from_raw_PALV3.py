@@ -77,7 +77,7 @@ if __name__ == '__main__':
     
     ##This softclipping dict situation needs to be updated. 
     # softClippingDict = preprocess_helpers.parse_read2_BAM(options.OUTDIR)
-    logfile.write('Length of paired end mapping reads, filtered:\t{}\n'.format(len(softClippingDict)))
+    # logfile.write('Length of paired end mapping reads, filtered:\t{}\n'.format(len(softClippingDict)))
 
     keep_dict, standard_reads = preprocess_helpers.parse_read2(fastq2open, keep_dict, standard_dict)
     fastq2open.close()
@@ -97,30 +97,20 @@ if __name__ == '__main__':
     elif config.FASTQ_GZIP==False:
         fastq1open=open(name=options.FASTQ1,mode='r')
 
-    keep_dict, dropped_read2, num_short_tails = preprocess_helpers.parse_read1(fastq1open, keep_dict, options.OUTDIR, softClippingDict, standard_reads, config.QUAL)
+    keep_dict, standard_keep_dict, dropped_read1, num_short_tails = preprocess_helpers.parse_read1(fastq1open, keep_dict, options.OUTDIR, standard_reads, config.QUAL)
     fastq2open.close()
 
 
-    for read, reason in dropped_read2:
+    for read, reason in dropped_read1:
         dropped_reads_outfile.write('{}\t{}\n'.format(read, reason))
 
     logfile.write('Time to parse fastq2 and manually call short tails\t{}\n'.format(str(datetime.timedelta(seconds=int(time.time()-t0)))))
     logfile.write('Number short tail reads called manually\t{}\n'.format(num_short_tails))
-    logfile.write('Skipped due to low quality read2:\t{}\n'.format(len(dropped_read2)))
+    logfile.write('Skipped due to low quality read2:\t{}\n'.format(len(dropped_read1)))
     logfile.write('Reads for calculating normalized T-signal\t{}\n'.format(len(keep_dict)))
     t0 = time.time()
-    
 
-    # keep_dict = {'1101:9021:2000#TAGTGC': (preprocess_helpers.reverse_complement('ACCAAAAATCTGTCACAGAATTTTGAGACCATTAAAACAAGTTTAATGAN'), 0),
-    #              '1101:9793:1998#TAGTGC': (preprocess_helpers.reverse_complement('GGCTGGCCTGTACACTGACTTGAGACCAATAAAAGTGCACACCTTACCTN'), 0),
-    #              '1101:16455:1995#TAGTGC': (preprocess_helpers.reverse_complement('CCCTAAAATTGGTTTCAAGCCAATCTCATATCCTATATGTCTTTCTCAAN'), 0), 
-    #              '1101:16631:1996#TAGTGC': (preprocess_helpers.reverse_complement('CGGCTGTGGGAATGAATCATTGAAGTAATAAACTACAGTGGTTGATCCAN'), 0)}
-
-
-    # pickle.dump(keep_dict, open(os.path.join(options.OUTDIR, 'keep_dict.pickle'), "w"))
-    # keep_dict = pickle.load(open(os.path.join(options.OUTDIR, 'keep_dict.pickle'), "rb"))   
-
-    dropped_intensity, num_reads_kept = get_signal_helpers.calculate_intensities(options.INTENSITY, keep_dict, options.OUTDIR, config.FUTURES)
+    dropped_intensity, num_reads_kept = get_signal_helpers.calculate_intensities(options.INTENSITY, keep_dict, standard_keep_dict, options.OUTDIR, config.FUTURES)
     
     logfile.write('Time to calculate normalized T-signal\t{}\n'.format(str(datetime.timedelta(seconds=int(time.time()-t0)))))
     logfile.write('Skipped due to low quality intensity values\t{}\n'.format(len(dropped_intensity)))
