@@ -69,20 +69,18 @@ if __name__ == '__main__':
             raise ValueError("Strandedness flag must be S or s.")
 
 
-    # iterate through read1, separate standards, extract sequences
+    # iterate through read2, separate standards, extract sequences
     if config.FASTQ_GZIP==True:
-        fastq1open=gzip.open(options.FASTQ1, mode='rb')
+        fastq2open=gzip.open(options.FASTQ2, mode='rb')
     elif config.FASTQ_GZIP==False:
-        fastq1open=open(name=options.FASTQ1,mode='r')
-    else:
-        fastq1Tarfile=tarfile.open(name=options.FASTQ1, mode='r:gz')
-        fastq1open=fastq1Tarfile.extractfile(fastq1Tarfile.next())
+        fastq2open=open(name=options.FASTQ2,mode='r')
     
-    softClippingDict = preprocess_helpers.parse_read2_BAM(options.OUTDIR)
+    ##This softclipping dict situation needs to be updated. 
+    # softClippingDict = preprocess_helpers.parse_read2_BAM(options.OUTDIR)
     logfile.write('Length of paired end mapping reads, filtered:\t{}\n'.format(len(softClippingDict)))
 
-    keep_dict, standard_reads = preprocess_helpers.parse_read1(fastq1open, keep_dict, standard_dict)
-    fastq1open.close()
+    keep_dict, standard_reads = preprocess_helpers.parse_read2(fastq2open, keep_dict, standard_dict)
+    fastq2open.close()
 
     # write table of read_IDs, 3p ends, accession IDs
     all_reads = pd.concat([standard_reads, reads_dedup], axis=0).drop_duplicates(subset=['read_ID'], keep='first')
@@ -95,14 +93,11 @@ if __name__ == '__main__':
 
     # read in read2, separate short tails
     if config.FASTQ_GZIP==True:
-        fastq2open=gzip.open(options.FASTQ2,mode='rb')
+        fastq1open=gzip.open(options.FASTQ1,mode='rb')
     elif config.FASTQ_GZIP==False:
-        fastq2open=open(name=options.FASTQ2,mode='r')
-    else:
-        fastq2Tarfile=tarfile.open(name=options.FASTQ2, mode='r:gz')
-        fastq2open=fastq2Tarfile.extractfile(fastq2Tarfile.next())
+        fastq1open=open(name=options.FASTQ1,mode='r')
 
-    keep_dict, dropped_read2, num_short_tails = preprocess_helpers.parse_read2(fastq2open, keep_dict, options.OUTDIR, softClippingDict, standard_reads, config.QUAL)
+    keep_dict, dropped_read2, num_short_tails = preprocess_helpers.parse_read1(fastq1open, keep_dict, options.OUTDIR, softClippingDict, standard_reads, config.QUAL)
     fastq2open.close()
 
 

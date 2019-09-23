@@ -49,7 +49,7 @@ def dedup_bed(bedfile):
 
     return reads_dedup, dropped_reads
 
-def parse_read2_BAM(outdir):
+def parse_read1_BAM(outdir):
     """Parse a BAM file for read2, returning a dictionary of soft clipping.
     Arguments:
         unopened outdir
@@ -68,18 +68,18 @@ def parse_read2_BAM(outdir):
 
     return(softClippingDict)
 
-def parse_read1(fastq1, keep_dict, standard_dict):
+def parse_read2(fastq2, keep_dict, standard_dict):
     """Parse fastq1 file, extract reads that match standard sequences.
 
     Arguments:
-        fastq1: openened fastq1 file, from tarfile, with lines as binary. 
+        fastq2: openened fastq2 file, with lines as binary. 
         keep_dict: dictionary of {read_ID: None} for reads that pass filters so far
         standard_dict: dictionary of standard sequences
     """
     new_keep_dict = {}
     standard_reads = []
     line_counter = 0
-    for line in fastq1:
+    for line in fastq2:
         line = line.decode("utf-8") #This line is to decode the tarfile output to utf-8. 
         if line_counter == 0:
             read_ID = config.fastq_header_to_ID(line[1:])
@@ -142,7 +142,7 @@ def process_short(seq, softClipping):
    
     return(TL)
 
-def parse_read2(fastq2, keep_dict, outdir, softClippingDict, standard_reads, qual_filter = True):
+def parse_read1(fastq1, keep_dict, outdir, softClippingDict, standard_reads, qual_filter = True):
     """Parse fastq2 file, filter low quality or very short tails.
     Manually call tails between 4 and 9 nucleotides (inclusive).
 
