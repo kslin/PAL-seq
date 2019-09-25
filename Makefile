@@ -2,7 +2,7 @@
 
 #####################################################
 #  Makefile for PALseq V3 pipeline
-#  This pipeline is based on the PALseqKlinMod pipeline 
+#  This pipeline is based on the PALseqV3 pipeline 
 #  It is modified to use streptavidin fluorescence 
 #  as a readout of tail length, and uses the V3.1 version of
 #  PALseq library design (based on a design with Coffee)
@@ -24,9 +24,9 @@ help: ## Display this help message
 ###TJE 20181209 Need to change the lines concerning parsing of PALseq and Tail-seq data to give warnings and exit if requirements aren't met
 strand=S
 state=True
-#readCommand=tar xzfO #Note that this must be set along with the same argument in the config file.
-readCommand=zcat #Note that this must be set along with the same argument in the config file.
-clip5pR2=0
+# readCommand=zcat #Note that this must be set along with the same argument in the config file.
+readCommand= - #Note that this must be set along with the same argument in the config file.
+clip3pR2=10 #This should probably be 5. 
 clip5pR1=14 #???
 
 parseArgs:
@@ -38,22 +38,19 @@ demultiplex:
 
 align-to-genome: ## Align rest of reads to genome and intersect with gff file
 	#Now aligns read 2, not read 1.
-	STAR --genomeDir $(genomeDir) --outSAMtype BAM SortedByCoordinate --outSAMattributes NH HI AS nM jM --alignIntronMax 1 --runThreadN 24 --outFilterMultimapNmax 1 --outFilterMismatchNoverLmax 0.04 --outFilterIntronMotifs RemoveNoncanonicalUnannotated --readFilesCommand $(readCommand) --outSJfilterReads Unique --readFilesIn $(fastq2) $ --outFileNamePrefix $(outdir)/STAR_ > $(outdir)/stdOut_logFile.txt
+	STAR --genomeDir $(genomeDir) --outSAMtype BAM SortedByCoordinate --outSAMattributes NH HI AS nM jM --alignIntronMax 1 --runThreadN 24 --outFilterMultimapNmax 1 --clip3pNbases $(clip3pR2) --outFilterMismatchNoverLmax 0.04 --outFilterIntronMotifs RemoveNoncanonicalUnannotated --readFilesCommand $(readCommand) --outSJfilterReads Unique --readFilesIn $(fastq2) $ --outFileNamePrefix $(outdir)/STAR_ > $(outdir)/stdOut_logFile.txt
 
 intersect-gff:
 	bedtools intersect -abam $(outdir)/STAR_Aligned.sortedByCoord.out.bam -b $(gff) -bed -wb -wa -${strand} > $(outdir)/read1.bed
 
-filter_bam:
-	#All reads should have a mappable read 2. Read 1 
-
 signal-from-raw: ## generate normalized fluorscent signal for each read. 
-	python3 /lab/solexa_bartel/teisen/RNAseq/Scripts/PALseqKlinMod/tail-seq-scripts/get_signal_from_rawXXXXX.py --f1 $(fastq1) --f2 $(fastq2) -i $(intensity) -s $(standard_file) -o $(outdir) --strand ${strand}
+	python3 /lab/solexa_bartel/teisen/RNAseq/Scripts/PALseqV3/tail-seq-scripts/get_signal_from_raw_PALV3.py --f1 $(fastq1) --f2 $(fastq2) -i $(intensity) -s $(standard_file) -o $(outdir) --strand ${strand}
 
 pal-seq: ## 
-	python3 /lab/solexa_bartel/teisen/RNAseq/Scripts/PALseqKlinMod/tail-seq-scripts/tail_length_hmmXXXXXXX.py -o $(outdir) --twostate ${state}
+	python3 /lab/solexa_bartel/teisen/RNAseq/Scripts/PALseqV3/tail-seq-scripts/tail_length_hmmXXXXXXX.py -o $(outdir) --twostate ${state}
 
 summary: ## Aggregate individual tail lengths by accession and plot standards
-	python3 /lab/solexa_bartel/teisen/RNAseq/Scripts/PALseqKlinMod/tail-seq-scripts/summarize_results.py -o $(outdir)
+	python3 /lab/solexa_bartel/teisen/RNAseq/Scripts/PALseqV3/tail-seq-scripts/summarize_results.py -o $(outdir)
 
 clean:
 	rm $(outdir)/read2temp.bed
@@ -61,14 +58,14 @@ clean:
 	rm $(outdir)/Read2Filtered_STAR_Aligned.sortedByCoord.out.sam
 
 
-all: parseArgs align-to-genome intersect-gff filter_bam signal-from-raw signal-plot tail-seq summary clean ## Run all at once
+# all: parseArgs align-to-genome intersect-gff filter_bam signal-from-raw signal-plot tail-seq summary clean ## Run all at once
 
-all_no_parse: align-to-genome intersect-gff filter_bam signal-from-raw signal-plot tail-seq summary clean ## Run all at once
+testing: signal-from-raw
 
-all_from_bam: intersect-gff filter_bam signal-from-raw signal-plot tail-seq summary ## Run without STAR aligning
+# all_from_bam: intersect-gff filter_bam signal-from-raw signal-plot tail-seq summary ## Run without STAR aligning
 
-all_from_bed: signal-from-raw signal-plot tail-seq summary ##Run without intersect
+# all_from_bed: signal-from-raw signal-plot tail-seq summary ##Run without intersect
 
-all_hmm: tail-seq summary 
+# all_hmm: tail-seq summary 
 
-all-plots: signal-plot summary ## Run all plotting
+# all-plots: signal-plot summary ## Run all plotting

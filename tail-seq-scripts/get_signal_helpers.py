@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 
 import config
+import pdb
 
 
 def fix_vals(x):
@@ -21,65 +22,63 @@ def fix_vals(x):
 v_fix_vals = np.vectorize(fix_vals)
 
 
-def get_normalized_intensities(intensities, read1_sequence):
+def get_normalized_intensities(intensities, concatSequence):
     """Use average intensities for the nucleotides in read1 to normalize the signals for read2.
 
     Arguments:
         intensities: numpy array of shape (config.LEN1 + config.LEN2) x (number of nucleotides i.e. 4)
-        read1_sequence: string sequence of read1
+        concatSequence: string sequence of read1
     """
 
     # skip the number of starting nucleotides specified in the config file
     try:
-        intensities = np.vstack((intensities[config.NUM_SKIP:(config.LEN1 - config.NUM_SKIP_2),:],intensities[-1 * config.LEN2:,:]))
-        read1_sequence = read1_sequence[config.NUM_SKIP:(config.LEN1 - config.NUM_SKIP_2)]
-
-        # intensities = intensities[config.NUM_SKIP:,:]
-        # read1_sequence = read1_sequence[config.NUM_SKIP:]
+        # intensities = np.vstack((intensities[config.NUM_SKIP:(config.LEN1 - config.NUM_SKIP_2),:],intensities[-1 * config.LEN2:,:]))
+        # concatSequence = concatSequence[config.NUM_SKIP:(config.LEN1 - config.NUM_SKIP_2)]
+        intensitiesTrim = intensities[config.NUM_SKIP:(config.LEN1 + config.LEN2 - config.NUM_SKIP_2),:]
+        concatSequenceTrim = concatSequence[config.NUM_SKIP:(config.LEN1 + config.LEN2 - config.NUM_SKIP_2)]
     except:
         raise ValueError("Intensities and sequences for read1 must be longer than config.NUM_SKIP")
 
-    if len(intensities) != (config.LEN1 + config.LEN2 - config.NUM_SKIP - config.NUM_SKIP_2):
-    # if len(intensities) != (config.LEN1 + config.LEN2 - config.NUM_SKIP):
+    # if len(intensities) != (config.LEN1 + config.LEN2 - config.NUM_SKIP - config.NUM_SKIP_2):
+    if len(intensitiesTrim) != (config.LEN1 + config.LEN2 - config.NUM_SKIP - config.NUM_SKIP_2):
         raise ValueError("Intensities length not equal to config.LEN1 + config.LEN2")
 
-    if len(read1_sequence) != (config.LEN1 - config.NUM_SKIP - config.NUM_SKIP_2):
-    # if len(read1_sequence) != (config.LEN1 - config.NUM_SKIP):
-        raise ValueError("Read1 length must equal config.LEN1")
+    # if len(concatSequence) != (config.LEN1 - config.NUM_SKIP - config.NUM_SKIP_2):
+    if len(concatSequenceTrim) != (config.LEN1 + config.LEN2 - config.NUM_SKIP - config.NUM_SKIP_2):
+        raise ValueError("Read1 length must equal to intensity length")
 
-    # convert read1_sequence into one-hot encoding of 4 bits
+    # convert concatSequence into one-hot encoding of 4 bits
     ## Changed on 2019 06 13.
-    # read1_sequence = np.array([[float(nt == x) for x in config.NUC_ORDER] for nt in read1_sequence])
-    read1_sequence = np.array([[float(nt != x) for x in config.NUC_ORDER] for nt in read1_sequence])
-    
-    # add up the counts for each nucleotide
-    read1_nt_counts = np.sum(read1_sequence, axis=0)
 
-    # return None if one or more of the nucleotides doesn't show up in the read1_sequence
-    if np.min(read1_nt_counts) == 0:
+    ### Working on this line on 2019 09 23.
+    concatSequenceTrim = np.array([[float(nt == x) for x in config.NUC_ORDER] for nt in concatSequenceTrim])
+
+    # add up the counts for each nucleotide
+    concatSequenceNtCounts = np.sum(concatSequenceTrim, axis=0)
+
+    # return None if one or more of the nucleotides doesn't show up in the concatSequence
+    if np.min(concatSequenceNtCounts) == 0:
         return None
 
     # convert intensities to an array and split into read1 and read2 intensities
-    read1_intensities = intensities[:config.LEN1 - config.NUM_SKIP - config.NUM_SKIP_2] ##I think it's this line.
-    # read1_intensities = intensities[:config.LEN1 - config.NUM_SKIP]
-    read2_intensities = intensities[-1 * config.LEN2:]
-
-    # if any intensities are negative, convert to 1
-    read1_intensities = v_fix_vals(read1_intensities)
-    read2_intensities = v_fix_vals(read2_intensities)
+    concatSequenceIntensityTrim = intensitiesTrim[:] ##I think it's this line.
+    read2_intensities = intensities[-1 * config.NUM_SKIP_2:]
 
     # multiply read1 intensities by one-hot to get intensities for the base called
-    read1_intensities = np.multiply(read1_sequence, read1_intensities)
+    concatSequenceIntensityTrim = np.multiply(concatSequenceTrim, concatSequenceIntensityTrim)
+    # add up concatSequenceIntensityTrim for each nucleotide
+    concatSequenceIntensityTrim = np.sum(concatSequenceIntensityTrim, axis=0)
 
-    # add up read1_intensities for each nucleotide
-    read1_intensities = np.sum(read1_intensities, axis=0)
-
-    # get average read1_intensities for each nucleotide
-    norm_vals = np.divide(read1_intensities, read1_nt_counts)
+    # get average concatSequenceIntensityTrim for each nucleotide
+    norm_vals = np.divide(concatSequenceIntensityTrim, concatSequenceNtCounts)
 
     # divide read2 intensities by normalization values
     read2_intensities_normed = np.divide(read2_intensities, norm_vals)
-    return read2_intensities_normed
+
+    #Subtract the value of the background
+    read2_intensities_normed = np.subtract(read2_intensities_normed[:,], read2_intensities_normed[0,])
+
+    return(read2_intensities_normed)
 
 
 def get_t_signal(intensities):
@@ -95,11 +94,11 @@ def get_t_signal(intensities):
     other_channels = intensities[:, other_index]
     background = np.sum(other_channels, axis=1)
 
-    t_signal = np.log2(np.divide(t_channel, background))
+    # t_signal = np.log2(np.divide(t_channel, background))
 
-    # bound the signal
-    t_signal = np.minimum(t_signal, config.UPPERBOUND)
-    t_signal = np.maximum(t_signal, config.LOWERBOUND)
+    #for PAL-seq
+    t_signal = t_channel
+
 
     return t_signal
 
@@ -150,20 +149,20 @@ def get_batch_t_signal(params):
     skipped = []
 
     # iterate through signals in the batch
-    for (read_ID, read1, start, signal) in zip(*params):
+    for (read_ID, read2, start, signal) in zip(*params):
 
         signal = signal.reshape((config.LEN1+config.LEN2, 4))
 
-        # impute missing data
-        signal = impute(signal, config.NAN_LIMIT)
+        # # impute missing data
+        # signal = impute(signal, config.NAN_LIMIT)
 
-        # skip if too much missing data
-        if signal is None:
-            skipped.append(read_ID)
-            continue
+        # # skip if too much missing data
+        # if signal is None:
+        #     skipped.append(read_ID)
+        #     continue
 
         # calculate normalization
-        normed_signal = get_normalized_intensities(signal, read1)
+        normed_signal = get_normalized_intensities(signal, read2)
 
         # normalize t-signal and return the output as a string
         if normed_signal is not None:
@@ -177,7 +176,7 @@ def get_batch_t_signal(params):
     return skipped, write_str
 
 
-def calculate_intensities(intensity_file, keep_dict, outdir, num_processes):
+def calculate_intensities(intensity_file, keep_dict, outdir, num_processes, std = False):
     """Iterate through intensity file, extract values for mapping reads, calculate normalized T-signal.
     Writes intensities to file.
 
@@ -191,8 +190,8 @@ def calculate_intensities(intensity_file, keep_dict, outdir, num_processes):
     # keep track of how many reads we skip due having too many 0's
     skipped = []
     num_reads_kept = 0
-
-    outfile = open(os.path.join(outdir, 'normalized_t_signal.txt'), 'w')
+    if not std: outfile = open(os.path.join(outdir, 'normalized_t_signal_all.txt'), 'w')
+    else: outfile = open(os.path.join(outdir, 'normalized_t_signal_stds.txt'), 'w')
 
     # if indicated, run parallel version
     if num_processes > 1:
@@ -203,7 +202,7 @@ def calculate_intensities(intensity_file, keep_dict, outdir, num_processes):
 
 
     # read intensity file and check if it's in keep_dict
-    IDs, read1s, starts, intensity_values = [], [], [], []
+    IDs, read2s, starts, intensity_values = [], [], [], []
     ix = 0
     line_num = 0
 
@@ -216,20 +215,23 @@ def calculate_intensities(intensity_file, keep_dict, outdir, num_processes):
         read_ID = config.intensity_line_to_ID(line)
 
         try:
-            seq, tail_start = keep_dict[read_ID]
+            if std: 
+                seq, TailBeginLength, accession = keep_dict[read_ID]
+                read_ID = read_ID +"\t"+ accession
+            else: seq, TailBeginLength = keep_dict[read_ID]
             
         except:
             continue
 
         IDs.append(read_ID)
-        read1s.append(seq)
-        starts.append(tail_start)
+        read2s.append(seq)
+        starts.append(TailBeginLength)
         intensity_values.append(line[config.SIGNAL_COL_START: config.SIGNAL_COL_END])
         ix += 1
 
         if ix == config.CHUNKSIZE:
-            chunk = (IDs, read1s, starts, np.array(intensity_values, dtype=int))
-            IDs, read1s, starts, intensity_values = [], [], [], []
+            chunk = (IDs, read2s, starts, np.array(intensity_values, dtype=int))
+            IDs, read2s, starts, intensity_values = [], [], [], []
             ix = 0
 
             # if indicated, run parallel version
@@ -258,7 +260,6 @@ def calculate_intensities(intensity_file, keep_dict, outdir, num_processes):
             else:
                 # calculate t-signal
                 sk, write_str = get_batch_t_signal(chunk)
-
                 # write to file
                 skipped += sk
                 num_reads_kept += write_str.count('\n')
@@ -268,7 +269,7 @@ def calculate_intensities(intensity_file, keep_dict, outdir, num_processes):
     # calculate t-signals for the last chunks
     if num_processes > 1:
         if ix > 0:
-            chunk = (IDs, read1s, starts, np.array(intensity_values, dtype=int))
+            chunk = (IDs, read2s, starts, np.array(intensity_values, dtype=int))
             chunks.append(chunk)
 
         if len(chunks) > 0:
@@ -280,7 +281,7 @@ def calculate_intensities(intensity_file, keep_dict, outdir, num_processes):
                     outfile.write(write_str)
     else:
         if ix > 0:
-            chunk = (IDs, read1s, starts, np.array(intensity_values, dtype=int))
+            chunk = (IDs, read2s, starts, np.array(intensity_values, dtype=int))
 
             # calculate t-signal
             sk, write_str = get_batch_t_signal(chunk)

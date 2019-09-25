@@ -37,6 +37,8 @@ def dedup_bed(bedfile):
     plus = plus.drop_duplicates(subset=['read_ID','accession'], keep='first') #Previously, I think these reads were lost. TJE 2019 03 13
     minus = minus.drop_duplicates(subset=['read_ID','accession'], keep='first')
 
+    # pdb.set_trace()
+
     # discard reads that map to multiple genes
     plus = plus.drop_duplicates(subset=['read_ID'], keep=False)
     minus = minus.drop_duplicates(subset=['read_ID'], keep=False)
@@ -80,7 +82,7 @@ def parse_read2(fastq2, keep_dict, standard_dict):
     standard_reads = []
     line_counter = 0
     for line in fastq2:
-        line = line.decode("utf-8") #This line is to decode the tarfile output to utf-8. 
+        # line = line.decode("utf-8") #This line is to decode the tarfile output to utf-8. 
         if line_counter == 0:
             read_ID = config.fastq_header_to_ID(line[1:])
         elif line_counter == 1:
@@ -149,17 +151,20 @@ def parse_read1(fastq1, keep_dict, outdir, standard_reads, qual_filter = True):
     """
 
     new_keep_dict = {}
+    standard_keep_dict = {}
     short_tail_outfile = open(os.path.join(outdir, 'short_tails.txt'), 'w')
     short_tail_outfile.write('read_ID\ttail_length\n')
     num_short_tails = 0
     dropped_read1 = []
     line_counter = 0
-    standards = set(standard_reads['read_ID'].unique())
+    standards = dict(zip(standard_reads.read_ID,standard_reads.accession))
+    # standards = set(standard_reads['read_ID'].unique())
     total_lines = 0
 
     for line in fastq1:
         # Parse the fastq
-        line = line.decode("utf-8")
+        # line = line.decode("utf-8").strip()
+        line = line.strip()
         total_lines += 1
         # if total_lines % 1000 == 0: print("lines processed: %s"%(total_lines))
         if line_counter == 0:
@@ -167,6 +172,7 @@ def parse_read1(fastq1, keep_dict, outdir, standard_reads, qual_filter = True):
                 raise ValueError('Fastq2 file must begin with @')
             read_ID = config.fastq_header_to_ID(line[1:])
         elif line_counter == 1:
+            seqRaw = line
             seq = line[config.TRIM_BASES:] #In a splint run, this is 0. In a direct lig run, this is 4. 
         line_counter = (line_counter + 1) % 4
         if line_counter != 0 or read_ID not in keep_dict: continue
@@ -177,14 +183,14 @@ def parse_read1(fastq1, keep_dict, outdir, standard_reads, qual_filter = True):
             continue
 
         TL, TailBeginLength = process_short(seq, config.LEN1 - config.TRIM_BASES)
-        if TailBeginLength != 0: #Ts prior to klenow ext.
-            if read_ID not in standards:
-                new_keep_dict[read_ID] = (keep_dict[read_ID], TailBeginLength)
-            else: #in standards
-                standard_keep_dict[read_ID] = (keep_dict[read_ID], TailBeginLength)
 
-        elif read_ID in standards: #mostly for the 10mer. 
-            standard_keep_dict[read_ID] = (keep_dict[read_ID], TL)
+        if TailBeginLength != 0: #Ts prior to klenow ext.
+            new_keep_dict[read_ID] = (seqRaw + keep_dict[read_ID], TailBeginLength) #tuple of seq, begin_length
+            if read_ID in standards.keys():
+                standard_keep_dict[read_ID] = (seqRaw + keep_dict[read_ID], TailBeginLength,standards[read_ID])
+
+        elif read_ID in standards.keys(): #mostly for the 10mer. 
+            short_tail_outfile.write('{}\t{}\n'.format(read_ID, TL))
             num_short_tails += 1
 
         else:

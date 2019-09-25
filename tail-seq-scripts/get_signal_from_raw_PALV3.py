@@ -68,12 +68,12 @@ if __name__ == '__main__':
         else:
             raise ValueError("Strandedness flag must be S or s.")
 
-
     # iterate through read2, separate standards, extract sequences
     if config.FASTQ_GZIP==True:
-        fastq2open=gzip.open(options.FASTQ2, mode='rb')
+        fastq2open=gzip.open(options.FASTQ2, mode='rb', encoding='utf-8')
     elif config.FASTQ_GZIP==False:
-        fastq2open=open(name=options.FASTQ2,mode='r')
+        fastq2open=open(options.FASTQ2,'r')
+
     
     ##This softclipping dict situation needs to be updated. 
     # softClippingDict = preprocess_helpers.parse_read2_BAM(options.OUTDIR)
@@ -93,14 +93,17 @@ if __name__ == '__main__':
 
     # read in read2, separate short tails
     if config.FASTQ_GZIP==True:
-        fastq1open=gzip.open(options.FASTQ1,mode='rb')
+        fastq1open=gzip.open(options.FASTQ1, mode='rb', encoding='utf-8')
     elif config.FASTQ_GZIP==False:
-        fastq1open=open(name=options.FASTQ1,mode='r')
+        fastq1open=open(options.FASTQ1,'r')
 
     keep_dict, standard_keep_dict, dropped_read1, num_short_tails = preprocess_helpers.parse_read1(fastq1open, keep_dict, options.OUTDIR, standard_reads, config.QUAL)
+
     fastq2open.close()
 
-
+        
+    # standard_reads[standard_reads.read_ID=='1101:9029:11191']['accession'].to_string(index = False)
+    
     for read, reason in dropped_read1:
         dropped_reads_outfile.write('{}\t{}\n'.format(read, reason))
 
@@ -110,8 +113,10 @@ if __name__ == '__main__':
     logfile.write('Reads for calculating normalized T-signal\t{}\n'.format(len(keep_dict)))
     t0 = time.time()
 
-    dropped_intensity, num_reads_kept = get_signal_helpers.calculate_intensities(options.INTENSITY, keep_dict, standard_keep_dict, options.OUTDIR, config.FUTURES)
-    
+    dropped_intensity, num_reads_kept = get_signal_helpers.calculate_intensities(options.INTENSITY, keep_dict, options.OUTDIR, config.FUTURES)
+
+    dropped_intensity_std, num_reads_kept_std = get_signal_helpers.calculate_intensities(options.INTENSITY, standard_keep_dict, options.OUTDIR, config.FUTURES, std = True)
+
     logfile.write('Time to calculate normalized T-signal\t{}\n'.format(str(datetime.timedelta(seconds=int(time.time()-t0)))))
     logfile.write('Skipped due to low quality intensity values\t{}\n'.format(len(dropped_intensity)))
     logfile.write('Reads for HMM\t{}\n'.format(num_reads_kept))
