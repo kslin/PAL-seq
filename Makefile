@@ -47,7 +47,9 @@ signal-from-raw: ## generate normalized fluorscent signal for each read.
 	python3 /lab/solexa_bartel/teisen/RNAseq/Scripts/PALseqV3/tail-seq-scripts/get_signal_from_raw_PALV3.py --f1 $(fastq1) --f2 $(fastq2) -i $(intensity) -s $(standard_file) -o $(outdir) --strand ${strand}
 
 pal-seq: ## 
-	python3 /lab/solexa_bartel/teisen/RNAseq/Scripts/PALseqV3/tail-seq-scripts/tail_length_hmmXXXXXXX.py -o $(outdir) --twostate ${state}
+	python3 /lab/solexa_bartel/teisen/RNAseq/Scripts/PALseqV3/tail-seq-scripts/tail_length_lin_mod.py -o $(outdir)
+plot-model:
+	Rscript /lab/solexa_bartel/teisen/RNAseq/Scripts/PALseqV3/tail-seq-scripts/PlotMediansLinFit.R $(outdir)
 
 summary: ## Aggregate individual tail lengths by accession and plot standards
 	python3 /lab/solexa_bartel/teisen/RNAseq/Scripts/PALseqV3/tail-seq-scripts/summarize_results.py -o $(outdir)
@@ -60,7 +62,7 @@ clean:
 
 # all: parseArgs align-to-genome intersect-gff filter_bam signal-from-raw signal-plot tail-seq summary clean ## Run all at once
 
-testing: signal-from-raw
+testing: signal-from-raw signal-from-raw pal-seq plot-model
 
 # all_from_bam: intersect-gff filter_bam signal-from-raw signal-plot tail-seq summary ## Run without STAR aligning
 

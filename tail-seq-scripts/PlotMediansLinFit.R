@@ -16,11 +16,11 @@ BestFitGat <- gather(BestFit, key = concentration, value = intensity, -nucleotid
 
 ##Plotting
 pFit <- ggplot(StdMediansGat, aes(x = nucleotide_length, y = intensity, label = nucleotide_length)) + 
-	geom_point() + 
+	geom_point(size = 0.5) + 
 	geom_line(data = BestFitGat,  aes(x = nucleotide_length, y = intensity)) +
 	facet_wrap(~concentration, ncol = 5) + 
-	geom_text(position=position_jitter(width=10,height=10)) + 
+	geom_text(nudge_x = 5, nudge_y = 0.01, size = 2) + 
 	theme_tim_label()
 
-ggsave(plot = pFit, file = "pFit.pdf", width = 6, height = 2)
+ggsave(plot = pFit, file = paste0(args[1],'/BestFitModels.pdf'), width = 6, height = 2)
 

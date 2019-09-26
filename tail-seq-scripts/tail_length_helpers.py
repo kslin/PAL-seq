@@ -37,6 +37,7 @@ def train_model(training_array_dict, training_param_file, med_param_file):
     LinRegTup = [ss.linregress(medArr[:,(0,(1+i))])[:] for i in range(config.NUM_SKIP_2)]
     #slope, intercept, r_value, p_value, std_err
     LinRegArr = np.array(LinRegTup)
-    np.savetxt(med_param_file, medArr, header = "\t".join(['nucleotide_length', 'intensity_conc1', 'intensity_conc2', 'intensity_conc3', 'intensity_conc4','intensity_conc5']),comments = '',delimiter = '\t') 
+    np.savetxt(med_param_file, medArr, header = "\t".join(['nucleotide_length'] + ['conc_' + str(i) for i in range(6)]),comments = '',delimiter = '\t') 
     np.savetxt(training_param_file, LinRegArr, header = "\t".join(['slope', 'intercept', 'r_value', 'p_value', 'std_err']),comments = '',delimiter = '\t') 
-    sys.exit()
+
+    return(LinRegArr)

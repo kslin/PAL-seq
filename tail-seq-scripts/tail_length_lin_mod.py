@@ -56,14 +56,15 @@ if __name__ == '__main__':
 
     # collect random rows to train
     training_array_dict = tail_length_helpers.read_training_set(signal_file_std)
+    sys.exit() #Here's where I'm at
 
     print('{:.3f} seconds'.format(time.time() - t0))
     print("Training Linear Model...")
     t0 = time.time()
 
 
-    # create linear model
-    tail_length_helpers.train_model(training_array_dict,model_params_file,std_meds_file)
+    # create linear model, returns an array with the linear model parameters.
+    LinRegArr = tail_length_helpers.train_model(training_array_dict,model_params_file,std_meds_file)
 
     print('{:.3f} seconds'.format(time.time() - t0))
     print("Calculating tail-lengths...")
