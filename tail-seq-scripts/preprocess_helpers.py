@@ -89,9 +89,9 @@ def parse_read2(fastq2, keep_dict, standard_dict):
             seq = line[:-1]
 
             is_standard = False
-            for standard, name in standard_dict.items():
+            for standard, name_tuple in standard_dict.items():
                 if standard in seq:
-                    standard_reads.append(['standard', 0, read_ID, '+', standard_dict[standard]])
+                    standard_reads.append(['standard', 0, read_ID, '+', standard_dict[standard][1]])
                     new_keep_dict[read_ID] = seq
                     is_standard = True
                     break

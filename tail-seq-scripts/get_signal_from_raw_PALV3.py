@@ -61,10 +61,10 @@ if __name__ == '__main__':
     else:
         if options.STRAND == "S":
             standards = pd.read_csv(options.STANDARDS, sep='\t', header=None)
-            standard_dict = {preprocess_helpers.reverse_complement(x):y for (x,y) in zip(standards[0], standards[1])}
+            standard_dict = {preprocess_helpers.reverse_complement(x):(y,str(z)) for (x,y,z) in zip(standards[0], standards[1],standards[2])}
         elif options.STRAND == "s": #added parsing for standard strandedness here
             standards = pd.read_csv(options.STANDARDS, sep='\t', header=None)
-            standard_dict = {x:y for (x,y) in zip(standards[0], standards[1])}
+            standard_dict = {x:(y,str(z)) for (x,y,z) in zip(standards[0], standards[1], standards[2])}
         else:
             raise ValueError("Strandedness flag must be S or s.")
 

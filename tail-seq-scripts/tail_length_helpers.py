@@ -3,18 +3,11 @@ import numpy as np
 import config
 import scipy.signal as ss
 
-def read_training_set(infile, file_length, train_size, random_seed=0):
+def read_training_set(infile, file_length, random_seed=0):
     """
-    Get training data for HMM.
+    Get training data for linear model.
     Return the sequences concatenated together and a list of sequence lengths.
     """
-    np.random.seed(random_seed)
-    keep_ix = np.sort(np.random.choice(range(file_length), size=train_size, replace=False))
-    # keep_ix = np.arange(train_size)
-
-    line_counter = 0
-    ix_counter = 0
-    current_ix = keep_ix[ix_counter]
 
     training_values = []
     training_seq_lengths = []

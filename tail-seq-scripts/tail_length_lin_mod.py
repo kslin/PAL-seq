@@ -41,22 +41,23 @@ if __name__ == '__main__':
     warnings.filterwarnings("ignore", category=DeprecationWarning)
     warnings.filterwarnings("ignore", category=RuntimeWarning)
 
-    signal_file = os.path.join(options.OUTDIR, 'normalized_t_signal.txt')
-    signal_file_std = os.path.join(options.OUTDIR, 'normalized_t_signal.txt')
+    signal_file = os.path.join(options.OUTDIR, 'normalized_t_signal_all.txt')
+    signal_file_std = os.path.join(options.OUTDIR, 'normalized_t_signal_stds.txt')
     short_tail_file = os.path.join(options.OUTDIR, 'short_tails.txt')
     all_info_file = os.path.join(options.OUTDIR, 'all_read_info.txt')
 
     # if the necesary input files don't exist, quit
-    for f in [signal_file, short_tail_file, all_info_file]:
+    for f in [signal_file, signal_file_std, short_tail_file, all_info_file]:
         if not os.path.exists(f):
             print("{} does not exist. Run T-signal script first with the same output directory.".format(f))
             sys.exit()
 
     ### get training set ###
+    ### Now this training set is just the standards, fitting to a linear model. TJE 2019 09 26###
     t0 = time.time()
 
     # collect random rows to train
-    training_values, training_seq_lengths = tail_length_helpers.read_training_set(signal_file, file_length, config.TRAIN_SIZE, random_seed=0)
+    training_array = tail_length_helpers.read_training_set(signal_file_std, true_lengths)
 
     print('{:.3f} seconds'.format(time.time() - t0))
     print("Training HMM...")
