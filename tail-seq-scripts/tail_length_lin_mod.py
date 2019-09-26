@@ -5,7 +5,6 @@ import sys
 import time
 import warnings
 
-from hmmlearn import hmm
 import numpy as np
 import pandas as pd
 
@@ -15,16 +14,13 @@ import tail_length_helpers
 if __name__ == '__main__':
 
     parser = OptionParser()
-    parser.add_option("-s", dest="SIGNAL", help="signal file output from get_signal.py")
+    # parser.add_option("-s", dest="SIGNAL", help="signal file output from get_signal.py")
     parser.add_option("-o", "--outdir", dest="OUTDIR", help="output directory")
-    parser.add_option("--twostate", dest="TWOSTATE", default=True, help="toggle for 2-state model")
-    parser.add_option("-f", "--futures", dest="FUTURES", type="int", default=1, help="number of threads to use")
+    # parser.add_option("--twostate", dest="TWOSTATE", default=True, help="toggle for 2-state model")
+    # parser.add_option("-f", "--futures", dest="FUTURES", type="int", default=1, help="number of threads to use")
 
     (options, args) = parser.parse_args()
-    #parse the boolean here
-    if options.TWOSTATE=='True': options.TWOSTATE=True
-    elif options.TWOSTATE=='False': options.TWOSTATE=False
-    else: options.TWOSTATE=True
+
 
 
     print("Writing tail-length outputs to {}".format(options.OUTDIR))
@@ -34,17 +30,19 @@ if __name__ == '__main__':
     file_length = int(logfile.loc['Reads for HMM'][1])
 
     # quit if file too small
-    if file_length < config.TRAIN_SIZE:
-        print("The training size must be larger than the input file size")
-        sys.exit()
+    # if file_length < config.TRAIN_SIZE:
+    #     print("The training size must be larger than the input file size")
+    #     sys.exit()
 
-    warnings.filterwarnings("ignore", category=DeprecationWarning)
-    warnings.filterwarnings("ignore", category=RuntimeWarning)
+    # warnings.filterwarnings("ignore", category=DeprecationWarning)
+    # warnings.filterwarnings("ignore", category=RuntimeWarning)
 
     signal_file = os.path.join(options.OUTDIR, 'normalized_t_signal_all.txt')
     signal_file_std = os.path.join(options.OUTDIR, 'normalized_t_signal_stds.txt')
     short_tail_file = os.path.join(options.OUTDIR, 'short_tails.txt')
     all_info_file = os.path.join(options.OUTDIR, 'all_read_info.txt')
+    model_params_file = os.path.join(options.OUTDIR, 'model_params.txt')
+    std_meds_file = os.path.join(options.OUTDIR, 'standard_medians.txt')
 
     # if the necesary input files don't exist, quit
     for f in [signal_file, signal_file_std, short_tail_file, all_info_file]:
@@ -57,30 +55,15 @@ if __name__ == '__main__':
     t0 = time.time()
 
     # collect random rows to train
-    training_array = tail_length_helpers.read_training_set(signal_file_std, true_lengths)
+    training_array_dict = tail_length_helpers.read_training_set(signal_file_std)
 
     print('{:.3f} seconds'.format(time.time() - t0))
-    print("Training HMM...")
+    print("Training Linear Model...")
     t0 = time.time()
 
-    # create HMM model
-    if options.TWOSTATE:
-        params = config.HMM_PARAMS_2STATE
-        MODEL = hmm.GaussianHMM(n_components=3, init_params="", n_iter=config.MAX_ITER, tol=config.TOL)
-        
-    else:
-        params = config.HMM_PARAMS_3STATE
-        MODEL = hmm.GaussianHMM(n_components=4, init_params="", n_iter=config.MAX_ITER, tol=config.TOL)
 
-    MODEL.startprob_ = params['START_PROB_INIT']
-    MODEL.transmat_ = params['TRANSITION_INIT']
-    MODEL.means_ = params['MEANS_INIT']
-    MODEL.covars_ = params['VARS_INIT']
-
-    # train model
-    MODEL.fit(training_values, lengths=training_seq_lengths)
-    print(MODEL.monitor_)
-    print(MODEL.startprob_, MODEL.transmat_, MODEL.means_, MODEL.covars_)
+    # create linear model
+    tail_length_helpers.train_model(training_array_dict,model_params_file,std_meds_file)
 
     print('{:.3f} seconds'.format(time.time() - t0))
     print("Calculating tail-lengths...")

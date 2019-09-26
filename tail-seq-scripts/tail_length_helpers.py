@@ -1,65 +1,42 @@
 import gzip
 import numpy as np
+import pandas as pd #needs 0.24 or higher
 import config
-import scipy.signal as ss
+import pdb
+import scipy.stats as ss
+import sys
 
-def read_training_set(infile, file_length, random_seed=0):
+def read_training_set(infile):
     """
-    Get training data for linear model.
-    Return the sequences concatenated together and a list of sequence lengths.
+    Get standard data for linear model.
+    Return a dictionary of numpy arrays, one entry for each standard class.
+    The numpy arrays have the first column as the length value and then the different concentrations
     """
 
-    training_values = []
-    training_seq_lengths = []
-    with open(infile, 'r') as f:
-        for line in f:
-            if line_counter == current_ix:
-                line = line[:-1].split('\t') # remove newline character and split by tab
-                tail_start = int(line[1])
-                line = smooth(line)
-                if (ix_counter % 2) == 0:
-                    training_values.append([config.START_SIGNAL + 1])
-                else:
-                    training_values.append([config.START_SIGNAL - 1])
-                for val in line[2 + tail_start:]:
-                    training_values.append([float(val)])
-                training_seq_lengths.append(config.LEN2 - tail_start + 1)
+    signal_file = pd.read_csv(infile, usecols = [1,*range(3,3+config.NUM_SKIP_2)],sep='\t', header=None, engine='c')
 
-                # update counters
-                ix_counter += 1
-                if ix_counter == train_size:
-                    break
+    stds_uniq = signal_file[1].unique()
+    training_array_dict = {}
+    for std in stds_uniq:
+        training_array_dict[std] = signal_file[signal_file[1] == std].to_numpy()
 
-                current_ix = keep_ix[ix_counter]
-
-            line_counter += 1
-
-    return np.array(training_values), training_seq_lengths
+    return training_array_dict
 
 
-def get_tail_length_from_emissions(emit, twostate):
+def train_model(training_array_dict, training_param_file, med_param_file):
     """
-    Get the tail length from HMM emissions.
-    Return the longest string of contiguous 0's before the first 1
+    Get linear model parameters.
     """
-    if twostate:
-        emit = list(emit == 0) + [0]
-    else:
-        emit = list((emit == 0) + (emit == 1)) + [0]
-    if 1 not in emit:
-        return 0
+    
+    medList = [] #median dict
+    for std, arr in training_array_dict.items():
+        medList.append(np.median(arr,axis = 0))
+    medArr = np.vstack(medList)
 
-    start = emit.index(1)
-    end  = emit.index(0, start)
-    return end - start
-
-def smooth(signal):
-    """
-    Modified to smooth only after the tail starts.
-    TJE 2019 06 09 
-    """
-    tail_starts = int(signal[1])
-    f64Signal = np.array(signal[(2 + tail_starts):]).astype(np.float)
-    f64SignalFilt = ss.medfilt(f64Signal,11)
-    strSignalFilt = np.insert(f64SignalFilt.astype(str),0,signal[0:(2 + tail_starts)])
-    return strSignalFilt
+    #linear regression
+    LinRegTup = [ss.linregress(medArr[:,(0,(1+i))])[:] for i in range(config.NUM_SKIP_2)]
+    #slope, intercept, r_value, p_value, std_err
+    LinRegArr = np.array(LinRegTup)
+    np.savetxt(med_param_file, medArr, header = "\t".join(['nucleotide_length', 'intensity_conc1', 'intensity_conc2', 'intensity_conc3', 'intensity_conc4','intensity_conc5']),comments = '',delimiter = '\t') 
+    np.savetxt(training_param_file, LinRegArr, header = "\t".join(['slope', 'intercept', 'r_value', 'p_value', 'std_err']),comments = '',delimiter = '\t') 
+    sys.exit()
