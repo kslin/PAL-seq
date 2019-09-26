@@ -40,9 +40,8 @@ NAN_LIMIT = 5 # number of positions with no signal in the intensity file allowed
 QUAL = True #If true, only one mismatch is allowed to call a tail with the first 11 nt being T. Else, two mismatches are allowed. 
 #Gzip status for fastq and intensity files
 FASTQ_GZIP = False #if false, extension is .txt, if True extension is .txt.gz
-TRIM_BASES = 14 #??
-# INTENSITY_GZIP = False #if false, extension is .txt, else extension is .txt.gz ##This is handled differently in the get_signal_helpers code
-
+TRIM_BASES = 14 #adapter length of read 1
+OPTIM_CONC = 2 #cycle no corresponding to the conccentration that is used for the linear model. 0 is the background (no streptavidin) cycle
 
 # WINDOW_SIZE, CUTOFF = 40, -20
 

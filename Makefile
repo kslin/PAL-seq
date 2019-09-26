@@ -62,6 +62,8 @@ clean:
 
 # all: parseArgs align-to-genome intersect-gff filter_bam signal-from-raw signal-plot tail-seq summary clean ## Run all at once
 
+testingall: parseArgs align-to-genome intersect-gff signal-from-raw signal-from-raw pal-seq plot-model
+
 testing: signal-from-raw signal-from-raw pal-seq plot-model
 
 # all_from_bam: intersect-gff filter_bam signal-from-raw signal-plot tail-seq summary ## Run without STAR aligning
