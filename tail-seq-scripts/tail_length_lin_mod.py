@@ -77,10 +77,10 @@ if __name__ == '__main__':
 
 
     # creat DataFrame of tail length values
-    tail_length_df = pd.DataFrame({'read_ID': all_ids, 'tail_length': all_tls, 'method': 'LM'})
+    tail_length_df = pd.DataFrame({'read_ID': all_ids, 'tail_length': all_tls, 'method': 'LM'}).set_index('read_ID')
 
     # tail_length_df.loc[tail_length_df['read_ID'].isin(std_df[0]),'method'] = 'LM_STD' #standards called by LM 
-    tail_length_df = tail_length_df.set_index('read_ID')
+    # tail_length_df = tail_length_df.set_index('read_ID')
 
     print('{:d} tail lengths calculated by linear model.'.format(len(tail_length_df)))
 

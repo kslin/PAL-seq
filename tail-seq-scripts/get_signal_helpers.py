@@ -31,6 +31,7 @@ def get_normalized_intensities(intensities, concatSequence):
     """
 
     # skip the number of starting nucleotides specified in the config file
+
     try:
         # intensities = np.vstack((intensities[config.NUM_SKIP:(config.LEN1 - config.NUM_SKIP_2),:],intensities[-1 * config.LEN2:,:]))
         # concatSequence = concatSequence[config.NUM_SKIP:(config.LEN1 - config.NUM_SKIP_2)]
@@ -75,6 +76,13 @@ def get_normalized_intensities(intensities, concatSequence):
     # divide read2 intensities by normalization values
     read2_intensities_normed = np.divide(read2_intensities, norm_vals)
 
+    #normalized to A/C
+    # read2_intensities_normed = read2_intensities / np.sum(read2_intensities[:,0:2],axis = 1).reshape((6,1))
+
+    #Unnormalized
+    # read2_intensities_normed = read2_intensities
+
+
     #Subtract the value of the background
     read2_intensities_normed = np.subtract(read2_intensities_normed[:,], read2_intensities_normed[0,])
 
@@ -84,15 +92,19 @@ def get_normalized_intensities(intensities, concatSequence):
 def get_t_signal(intensities):
     """Divide T intensity by the sum of the other intensities to get the t-signal"""
 
-    # find which index T is at in the intensity file
+    # find which index G/T is at in the intensity file
     t_index = config.NUC_ORDER.index('T')
-    other_index = list(range(len(config.NUC_ORDER)))
-    other_index.remove(t_index)
+    # g_index = config.NUC_ORDER.index('G')
+
+    # other_index = list(range(len(config.NUC_ORDER)))
+    # other_index.remove(t_index)
     
     # separate T channel from the others
     t_channel = intensities[:, t_index]
-    other_channels = intensities[:, other_index]
-    background = np.sum(other_channels, axis=1)
+
+    # t_channel = np.sum(intensities[:, (g_index,t_index)],axis = 1)
+    # other_channels = intensities[:, other_index]
+    # background = np.sum(other_channels, axis=1)
 
     # t_signal = np.log2(np.divide(t_channel, background))
 
@@ -162,6 +174,7 @@ def get_batch_t_signal(params):
         #     continue
 
         # calculate normalization
+        # if read_ID == '1101:12788:2690': pdb.set_trace()
         normed_signal = get_normalized_intensities(signal, read2)
 
         # normalize t-signal and return the output as a string

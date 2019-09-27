@@ -37,8 +37,13 @@ def train_model(training_array_dict, training_param_file, med_param_file):
     medArr[:,0] = medArr[:,0] - (config.LEN1 - config.TRIM_BASES)
 
     #removes negative tail lengths (i.e. 10mer)
+    # mask = np.ones(medArr.shape[0], dtype=bool)
+    # mask[np.where(medArr[:,0] < 0)] = False
+    # medArr = medArr[mask,:]
+
+    #removes the 324mer, as per Alex's notes
     mask = np.ones(medArr.shape[0], dtype=bool)
-    mask[np.where(medArr[:,0] < 0)] = False
+    mask[np.where(medArr[:,0] == (324 - (config.LEN1 - config.TRIM_BASES)))] = False
     medArr = medArr[mask,:]
 
     #linear regression
@@ -46,7 +51,7 @@ def train_model(training_array_dict, training_param_file, med_param_file):
 
     #slope, intercept, r_value, p_value, std_err
     LinRegArr = np.array(LinRegTup)
-    np.savetxt(med_param_file, medArr, header = "\t".join(['nucleotide_length'] + ['conc_' + str(i) for i in range(6)]),comments = '',delimiter = '\t') 
+    np.savetxt(med_param_file, medArr, header = "\t".join(['nucleotide_length'] + ['conc_' + str(i) for i in range(config.NUM_SKIP_2)]),comments = '',delimiter = '\t') 
     np.savetxt(training_param_file, LinRegArr, header = "\t".join(['slope', 'intercept', 'r_value', 'p_value', 'std_err']),comments = '',delimiter = '\t') 
 
     return(LinRegArr)
