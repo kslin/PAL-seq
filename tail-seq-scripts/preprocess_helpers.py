@@ -16,7 +16,7 @@ def reverse_complement(seq):
     return ''.join([nt_dict[nt] for nt in seq][::-1])
 
 
-def dedup_bed(bedfile):
+def dedup_bed(bedfile, ANNO_TYPE = False):
     """Deduplicate intersectBed results.
     If a read maps to multiple genes, discard.
     If a read maps to multiple exons of a gene, use later exon.
@@ -28,10 +28,18 @@ def dedup_bed(bedfile):
 
     # split into plus and minus strand reads and sort each by 3' end
     columns = ['chr','3p_end','read_ID','strand','accession']
-    plus = bedfile[bedfile[18] == '+'][[0,2,3,18,20]].sort_values(2, ascending=False)
-    plus.columns = columns
-    minus = bedfile[bedfile[18] == '-'][[0,1,3,18,20]].sort_values(1, ascending=True)
-    minus.columns = columns
+
+    if not ANNO_TYPE:
+        plus = bedfile[bedfile[18] == '+'][[0,2,3,18,20]].sort_values(2, ascending=False)
+        plus.columns = columns
+        minus = bedfile[bedfile[18] == '-'][[0,1,3,18,20]].sort_values(1, ascending=True)
+        minus.columns = columns
+
+    if ANNO_TYPE: #takes a bedfile format
+        plus = bedfile[bedfile[5] == '+'][[0,2,3,5,15]].sort_values(2, ascending=False)
+        plus.columns = columns
+        minus = bedfile[bedfile[5] == '-'][[0,1,3,5,15]].sort_values(1, ascending=True)
+        minus.columns = columns
 
     # for reads that map to multiple exons of the same transcript, take later exon
     plus = plus.drop_duplicates(subset=['read_ID','accession'], keep='first') #Previously, I think these reads were lost. TJE 2019 03 13

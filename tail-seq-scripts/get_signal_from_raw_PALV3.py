@@ -22,6 +22,7 @@ if __name__ == '__main__':
     parser.add_option("-s","--standards", dest="STANDARDS", default=None, help="file with standard sequences")
     parser.add_option("-o","--outdir", dest="OUTDIR", help="output directory")
     parser.add_option("--strand", dest="STRAND", help="Library must be stranded.") #added by TJE 20180827
+    parser.add_option("-b", action="store_true", dest="ANNO_TYPE", default = False) #added by TJE 20190929 
 
     (options, args) = parser.parse_args()
 
@@ -37,9 +38,10 @@ if __name__ == '__main__':
     t0 = time.time()
 
     # dedup bed input and write dropped reads
-    bed_output = pd.read_csv(bedfile, sep='\t', header=None, usecols=[0,1,2,3,18,20], engine='c')
+    if not options.ANNO_TYPE: bed_output = pd.read_csv(bedfile, sep='\t', header=None, usecols=[0,1,2,3,18,20], engine='c')
+    if options.ANNO_TYPE: bed_output = pd.read_csv(bedfile, sep='\t', header=None, usecols=[0,1,2,3,5,15], engine='c')
     bed_output[3] = [config.fastq_header_to_ID(x) for x in bed_output[3]]
-    reads_dedup, dropped_reads = preprocess_helpers.dedup_bed(bed_output)
+    reads_dedup, dropped_reads = preprocess_helpers.dedup_bed(bed_output, options.ANNO_TYPE)
 
     # start writing dropped reads
     dropped_reads_outfile = open(os.path.join(options.OUTDIR, 'dropped_reads.txt'), 'w')

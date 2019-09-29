@@ -43,8 +43,9 @@ align-to-genome: ## Align rest of reads to genome and intersect with gff file
 intersect-gff:
 	bedtools intersect -abam $(outdir)/STAR_Aligned.sortedByCoord.out.bam -b $(gff) -bed -wb -wa -${strand} > $(outdir)/read1.bed
 
+#ARE YOU USING A BEDFILE?
 signal-from-raw: ## generate normalized fluorscent signal for each read. 
-	python3 /lab/solexa_bartel/teisen/RNAseq/Scripts/PALseqV3/tail-seq-scripts/get_signal_from_raw_PALV3.py --f1 $(fastq1) --f2 $(fastq2) -i $(intensity) -s $(standard_file) -o $(outdir) --strand ${strand}
+	python3 /lab/solexa_bartel/teisen/RNAseq/Scripts/PALseqV3/tail-seq-scripts/get_signal_from_raw_PALV3.py --f1 $(fastq1) --f2 $(fastq2) -i $(intensity) -s $(standard_file) -o $(outdir) --strand ${strand} -b
 
 pal-seq: ## 
 	python3 /lab/solexa_bartel/teisen/RNAseq/Scripts/PALseqV3/tail-seq-scripts/tail_length_lin_mod.py -o $(outdir)
@@ -67,7 +68,7 @@ clean:
 
 # all: parseArgs align-to-genome intersect-gff filter_bam signal-from-raw signal-plot tail-seq summary clean ## Run all at once
 
-testingall: parseArgs align-to-genome intersect-gff signal-from-raw signal-from-raw pal-seq plot-model
+testingall: parseArgs align-to-genome intersect-gff signal-from-raw pal-seq plot-model summary
 
 testing: signal-from-raw pal-seq plot-model summary
 
