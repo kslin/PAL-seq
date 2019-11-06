@@ -1,4 +1,4 @@
-# Tail-Seq
+# PAL-Seq
 
 This pipeline aligns reads from Tail-Seq and PAL-seq v2. For PAL-seq data, it also finds the 3' ends of transcripts. It outputs poly(A)-tail lengths.
 
