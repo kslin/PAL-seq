@@ -9,6 +9,28 @@ import pandas as pd
 
 import config
 
+'''
+This code contains helper functions for parsing the instensity files from an 
+Illumina Hiseq 2500. For a new user, the most important thing to note is 
+line 74. This line computes the signal that is used as the normalization for 
+the T channel when computing the T signal. The normalization is important because 
+different clusters will have different sizes and thus intensities. 
+
+There are two at least two ways to think about this normalization:
+1) Derive a constant that results from the average intensity of each base in 
+read 1 using the signal for that base. E.g. if the called base in A, the signal
+from the A channel is used to compute the normalization constant. 
+2) Derive a constant that results from the average intensity of each base in 
+read 1 using the signal for bases other than the called base. This assesses the 
+background instead of the signal: i.e. if the called base is A, the signal from
+C, G, and T channels are used to compute the normalization constant. 
+
+We used normalization strategy 2 for the splint ligation runs and normalization 
+strategy 1 for the direct ligation runs (toggled by uncommenting line 73). 
+In practice, either might be appropriate depending on the run, but it's 
+important to make that assessment depending on how the standards are called 
+after the pipeline is run. 
+'''
 
 def fix_vals(x):
     """Convert negative values to 1."""
@@ -48,7 +70,6 @@ def get_normalized_intensities(intensities, read1_sequence):
         raise ValueError("Read1 length must equal config.LEN1")
 
     # convert read1_sequence into one-hot encoding of 4 bits
-    ## Changed on 2019 06 13.
     # read1_sequence = np.array([[float(nt == x) for x in config.NUC_ORDER] for nt in read1_sequence])
     read1_sequence = np.array([[float(nt != x) for x in config.NUC_ORDER] for nt in read1_sequence])
     
@@ -60,7 +81,7 @@ def get_normalized_intensities(intensities, read1_sequence):
         return None
 
     # convert intensities to an array and split into read1 and read2 intensities
-    read1_intensities = intensities[:config.LEN1 - config.NUM_SKIP - config.NUM_SKIP_2] ##I think it's this line.
+    read1_intensities = intensities[:config.LEN1 - config.NUM_SKIP - config.NUM_SKIP_2] 
     # read1_intensities = intensities[:config.LEN1 - config.NUM_SKIP]
     read2_intensities = intensities[-1 * config.LEN2:]
 

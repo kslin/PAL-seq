@@ -1,7 +1,7 @@
-#Opens the fastq files from their original positions on solexa public as tarfiles, then uses Biopython to parse
-#Must be run with python 2.7
-#python2.7 tail-seq-scripts/dephase.py /lab/solexa_public/Bartel/160311_WIGTC-HISEQA_C73V2ACXX/QualityScore/CTAGTC-s_4_1_sequence.txt.tar.gz
-#Include extra packages in requirements file??
+# Opens the fastq files from their original positions on solexa public as tarfiles, then uses Biopython to parse
+# Must be run with python 2.7
+# Example run command: python2.7 tail-seq-scripts/dephase.py /lab/solexa_public/Bartel/160311_WIGTC-HISEQA_C73V2ACXX/QualityScore/CTAGTC-s_4_1_sequence.txt.tar.gz
+# Extra packages not included in the requirements file. 
 
 from Bio import SeqIO, bgzf
 import sys

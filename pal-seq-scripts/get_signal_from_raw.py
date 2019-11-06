@@ -114,16 +114,7 @@ if __name__ == '__main__':
     logfile.write('Skipped due to low quality read2:\t{}\n'.format(len(dropped_read2)))
     logfile.write('Reads for calculating normalized T-signal\t{}\n'.format(len(keep_dict)))
     t0 = time.time()
-    
-
-    # keep_dict = {'1101:9021:2000#TAGTGC': (preprocess_helpers.reverse_complement('ACCAAAAATCTGTCACAGAATTTTGAGACCATTAAAACAAGTTTAATGAN'), 0),
-    #              '1101:9793:1998#TAGTGC': (preprocess_helpers.reverse_complement('GGCTGGCCTGTACACTGACTTGAGACCAATAAAAGTGCACACCTTACCTN'), 0),
-    #              '1101:16455:1995#TAGTGC': (preprocess_helpers.reverse_complement('CCCTAAAATTGGTTTCAAGCCAATCTCATATCCTATATGTCTTTCTCAAN'), 0), 
-    #              '1101:16631:1996#TAGTGC': (preprocess_helpers.reverse_complement('CGGCTGTGGGAATGAATCATTGAAGTAATAAACTACAGTGGTTGATCCAN'), 0)}
-
-
-    # pickle.dump(keep_dict, open(os.path.join(options.OUTDIR, 'keep_dict.pickle'), "w"))
-    # keep_dict = pickle.load(open(os.path.join(options.OUTDIR, 'keep_dict.pickle'), "rb"))   
+     
 
     dropped_intensity, num_reads_kept = get_signal_helpers.calculate_intensities(options.INTENSITY, keep_dict, options.OUTDIR, config.FUTURES)
     

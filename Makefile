@@ -8,6 +8,7 @@ help: ## Display this help message
 	@echo "Messages:\n"
 	@echo "Did you set the read length in the config file?"
 	@echo "How many Ns are allowed in the beginning of read 1, set in the config file?\n\n"
+	@echo "Either the run paths must be changed or this code should be run from the git cloned folder.\n\n"
 
 
 DataType?=Tail-seq
@@ -63,16 +64,16 @@ filter_bam:
 	samtools view -b $(outdir)/Read2Filtered_STAR_Aligned.sortedByCoord.out.sam > $(outdir)/Read2Filtered_STAR_Aligned.sortedByCoord.out.bam
 
 signal-from-raw: ## Extract intensities for mapping reads and calculate normalized T-signal
-	python3 /lab/solexa_bartel/teisen/RNAseq/Scripts/PALseqKlinMod/tail-seq-scripts/get_signal_from_raw.py --f1 $(fastq1) --f2 $(fastq2) -i $(intensity) -s $(standard_file) -o $(outdir) --strand ${strand}
+	python3 ./pal-seq-scripts/get_signal_from_raw.py --f1 $(fastq1) --f2 $(fastq2) -i $(intensity) -s $(standard_file) -o $(outdir) --strand ${strand}
 
 signal-plot: ## Plot T-signal density
-	python3 /lab/solexa_bartel/teisen/RNAseq/Scripts/PALseqKlinMod/tail-seq-scripts/plot_t_signals.py -o $(outdir) -b 100
+	python3 ./pal-seq-scripts/plot_t_signals.py -o $(outdir) -b 100
 
 tail-seq: ## Train and run HMM for calling tail lengths
-	python3 /lab/solexa_bartel/teisen/RNAseq/Scripts/PALseqKlinMod/tail-seq-scripts/tail_length_hmm.py -o $(outdir) --twostate ${state}
+	python3 ./pal-seq-scripts/tail_length_hmm.py -o $(outdir) --twostate ${state}
 
 summary: ## Aggregate individual tail lengths by accession and plot standards
-	python3 /lab/solexa_bartel/teisen/RNAseq/Scripts/PALseqKlinMod/tail-seq-scripts/summarize_results.py -o $(outdir)
+	python3 ./pal-seq-scripts/summarize_results.py -o $(outdir)
 
 clean: ## additional temp files removed. 
 	rm $(outdir)/read2temp.bed

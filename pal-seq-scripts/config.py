@@ -2,12 +2,13 @@ import numpy as np
 import re
 
 '''
-converting between Splint and Direct ligation datasets
-##Did you make the following changes to the pipeline before running?
+Converting between Splint and Direct ligation datasets
+
+Did you make the following changes to the pipeline before running?
 1. change the read command for unzipping the input files in the make file
 2. change the fastq GZIP to 'else' to read .tar.gz in the config file.
 3. change the trim bases to 0 in the config file.
-4. source the virtual env.
+4. change line 74 to 73 or vice versa.
 '''
 
 ### Functions for extracting the same read ID's from fastq files and intensity files ###
