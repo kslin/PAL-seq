@@ -44,8 +44,8 @@ def get_normalized_intensities(intensities, read1_sequence):
 
     # convert read1_sequence into one-hot encoding of 4 bits
     ## Changed on 2019 06 13
-    # read1_sequence = np.array([[float(nt == x) for x in config.NUC_ORDER] for nt in read1_sequence])
-    read1_sequence = np.array([[float(nt != x) for x in config.NUC_ORDER] for nt in read1_sequence])
+    read1_sequence = np.array([[float(nt == x) for x in config.NUC_ORDER] for nt in read1_sequence])
+    # read1_sequence = np.array([[float(nt != x) for x in config.NUC_ORDER] for nt in read1_sequence])
 
 
     # add up the counts for each nucleotide
