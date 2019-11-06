@@ -93,7 +93,7 @@ def get_t_signal(intensities):
     """Divide T intensity by the sum of the other intensities to get the t-signal"""
 
     # find which index G/T is at in the intensity file
-    # t_index = config.NUC_ORDER.index('T')
+    t_index = config.NUC_ORDER.index('T')
     g_index = config.NUC_ORDER.index('G')
 
     # other_index = list(range(len(config.NUC_ORDER)))
@@ -101,7 +101,7 @@ def get_t_signal(intensities):
     
     # separate T channel from the others
     t_channel = intensities[:, t_index]
-    # g_channel = intensities[:, g_index]
+    g_channel = intensities[:, g_index]
 
     # t_channel = np.sum(intensities[:, (g_index,t_index)],axis = 1)
     # other_channels = intensities[:, other_index]
