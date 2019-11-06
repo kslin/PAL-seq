@@ -7,7 +7,7 @@ help: ## Display this help message
 	@echo "See README for examples.\n"
 	@echo "Messages:\n"
 	@echo "Did you set the read length in the config file?"
-	@echo "Are you using an NN quality filtering for read two, set in the config file?\n\n"
+	@echo "How many Ns are allowed in the beginning of read 1, set in the config file?\n\n"
 
 
 DataType?=Tail-seq
@@ -15,13 +15,12 @@ Phasing?=False
 clip5pR1?=0
 
 #Parse the arguments for the datatype
-###TJE 20181209 Need to change the lines concerning parsing of PALseq and Tail-seq data to give warnings and exit if requirements aren't met
 ifeq (${DataType}, PALseq)
-	strand=S
-	state=True
-# 	readCommand=tar xzfO #Note that this must be set along with the same argument in the config file.
+	strand=S #S for mapping the reverse complement, s for mapping the same strand. 
+	state=True #Should a two or three state HMM be run? True runs a two state model, for PAL-seq
+# 	readCommand=tar xzfO #Note that this must be set along with the same argument in the config file if reading tarballs. 
 	readCommand=zcat #Note that this must be set along with the same argument in the config file.
-	clip5pR2=4
+	clip5pR2=4 #Number of bases fot clip from the 5p end of read 2 prior to tail length calling. For a splint ligation, this is 0. 
 
 else
 	strand=s
@@ -33,7 +32,6 @@ ifeq (${Phasing}, True)
 	clip5pR1=12
 endif
 
-#NEED TO CHANGE TO .GZ, NOT .TAR.GZ
 parseArgs:
 	mkdir ${outdir}
 	@echo ${strand}
@@ -51,7 +49,7 @@ intersect-gff:
 	bedtools intersect -abam $(outdir)/Read2STAR_Aligned.sortedByCoord.out.bam -b $(gff) -bed -wb -wa -${strand} > $(outdir)/read2.bed
 
 filter_bam:
-	## Implements a filtering step for the Read2STAR_Aligned.sortedByCoord.out.bam file.
+	## Implements a filtering step for the Read2STAR_Aligned.sortedByCoord.out.bam file. Only important for single-stranded ligation data. 
 	cut -f 4,21 $(outdir)/read2.bed > $(outdir)/read2temp.bed
 	cut -f 4,21 $(outdir)/read1.bed | grep -Ff - $(outdir)/read2temp.bed | cut -f 1 > $(outdir)/read2filtered.bed
 
@@ -76,7 +74,7 @@ tail-seq: ## Train and run HMM for calling tail lengths
 summary: ## Aggregate individual tail lengths by accession and plot standards
 	python3 /lab/solexa_bartel/teisen/RNAseq/Scripts/PALseqKlinMod/tail-seq-scripts/summarize_results.py -o $(outdir)
 
-clean:
+clean: ## additional temp files removed. 
 	rm $(outdir)/read2temp.bed
 	rm $(outdir)/read2filtered.bed
 	rm $(outdir)/Read2Filtered_STAR_Aligned.sortedByCoord.out.sam
@@ -84,7 +82,7 @@ clean:
 
 all: parseArgs align-to-genome intersect-gff filter_bam signal-from-raw signal-plot tail-seq summary clean ## Run all at once
 
-all_no_parse: align-to-genome intersect-gff filter_bam signal-from-raw signal-plot tail-seq summary clean ## Run all at once
+all_no_parse: align-to-genome intersect-gff filter_bam signal-from-raw signal-plot tail-seq summary clean ## Do not create the directory. 
 
 all_from_bam: intersect-gff filter_bam signal-from-raw signal-plot tail-seq summary ## Run without STAR aligning
 
