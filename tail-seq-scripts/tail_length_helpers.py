@@ -1,9 +1,7 @@
 import gzip
-
 import numpy as np
-
 import config
-
+import scipy.signal as ss
 
 def read_training_set(infile, file_length, train_size, random_seed=0):
     """
@@ -25,13 +23,13 @@ def read_training_set(infile, file_length, train_size, random_seed=0):
             if line_counter == current_ix:
                 line = line[:-1].split('\t') # remove newline character and split by tab
                 tail_start = int(line[1])
+                line = smooth(line)
                 if (ix_counter % 2) == 0:
                     training_values.append([config.START_SIGNAL + 1])
                 else:
                     training_values.append([config.START_SIGNAL - 1])
                 for val in line[2 + tail_start:]:
                     training_values.append([float(val)])
-
                 training_seq_lengths.append(config.LEN2 - tail_start + 1)
 
                 # update counters
@@ -61,3 +59,14 @@ def get_tail_length_from_emissions(emit, twostate):
     start = emit.index(1)
     end  = emit.index(0, start)
     return end - start
+
+def smooth(signal):
+    """
+    Modified to smooth only after the tail starts.
+    TJE 2019 06 09 
+    """
+    tail_starts = int(signal[1])
+    f64Signal = np.array(signal[(2 + tail_starts):]).astype(np.float)
+    f64SignalFilt = ss.medfilt(f64Signal,11)
+    strSignalFilt = np.insert(f64SignalFilt.astype(str),0,signal[0:(2 + tail_starts)])
+    return strSignalFilt

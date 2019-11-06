@@ -1,4 +1,14 @@
 import numpy as np
+import re
+
+'''
+converting between Splint and Direct ligation datasets
+##Did you make the following changes to the pipeline before running?
+1. change the read command for unzipping the input files in the make file
+2. change the fastq GZIP to 'else' to read .tar.gz in the config file.
+3. change the trim bases to 0 in the config file.
+4. source the virtual env.
+'''
 
 ### Functions for extracting the same read ID's from fastq files and intensity files ###
 
@@ -6,7 +16,8 @@ def fastq_header_to_ID(line):
   """
   Convert fastq header to read ID
   """
-  return line.split('#')[0].replace('WIGTC-HISEQ:2:','')
+  searchSTR = re.compile('WIGTC-HISEQ:\\d:')
+  return re.sub(searchSTR,'',line.split('#')[0])
 
 def intensity_line_to_ID(line):
   """
@@ -21,11 +32,18 @@ FUTURES = 24 # number of processes, set to 1 if not using multiprocessing
 LEN1, LEN2 = 50, 250 # length of read1 and read2
 SIGNAL_COL_START = 4 # column in intensity file where intensity values start
 SIGNAL_COL_END = (4*(LEN1 + LEN2)) + 4 # column in intensity file where intensity values end
-NUM_SKIP = 10 # number of nucleotides to skip when normalizing intensities
+NUM_SKIP = 10 # number of nucleotides to skip in read 1 when normalizing intensities USUALLY 10
+NUM_SKIP_2 = 0 # number of nucleotides to skip from the end of read 1 when normalizing intensities.   
 NUC_ORDER = ['A','C','G','T'] # order of nucleotides in intensity file
 UPPERBOUND, LOWERBOUND = 5, -5 # bounds for normalized T-signal
 CHUNKSIZE = 1000 # number of intensities to evaluate at a time
 NAN_LIMIT = 5 # number of positions with no signal in the intensity file allowed
+QUAL = True #If true, only one mismatch is allowed to call a tail with the first 11 nt being T. Else, two mismatches are allowed. 
+#Gzip status for fastq and intensity files
+FASTQ_GZIP = True #if false, extension is .txt, if True extension is .txt.gz, else extension is .tar.gz
+TRIM_BASES = 4 #Should be set to 0 for a splint ligation, 4 or 8 for a direct lig run. 
+# INTENSITY_GZIP = False #if false, extension is .txt, else extension is .txt.gz ##This is handled differently in the get_signal_helpers code
+
 
 # WINDOW_SIZE, CUTOFF = 40, -20
 
@@ -42,7 +60,7 @@ HMM_PARAMS_3STATE = {
                         "TRANSITION_INIT": np.array([[0.95, 0.03, 0.019, 0.001],
                                                      [0.001, 0.749, 0.249, 0.001],
                                                      [0.001, 0.001, 0.997, 0.001],
-                                                     [0.95, 0.025, 0.0249, 0.001]]),
+                                                     [0.95, 0.025, 0.024, 0.001]]),
 
                         "MEANS_INIT": np.array([[1.0], [0.0], [-1.0], [START_SIGNAL]]),
 

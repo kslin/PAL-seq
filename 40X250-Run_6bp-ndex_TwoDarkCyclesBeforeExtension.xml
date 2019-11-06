@@ -1,0 +1,359 @@
+<?xml version="1.0"?>
+<RecipeFile xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <Protocol>
+	<!-- OnBoard Clustering After cBOT Extension Step followed by Extension across polyA tail -->
+    <ChemistryRef Description="cBot Temp Hyb SR" ChemistryName="CBotTempHybSR" />
+
+	<ReadRef Description="Read #1" ReadName="Read1" />
+    <ChemistryRef Description="Index Preparation i7" ChemistryName="IndexPreparation-i7" />
+    <ReadRef Description="IndexRead i7" ReadName="IndexRead-i7" />
+    <ChemistryRef Description="End Deblock" ChemistryName="EndDeblock" />
+
+	<!-- Prepping for read 2 without doing the flip -->
+    <ChemistryRef Description="Index Preparation i5 SR" ChemistryName="IndexPreparation-i5-SR" />
+    <ReadRef Description="Read #2" ReadName="Read2" />
+    <ChemistryRef Description="Post Run Step" ChemistryName="PostRun" />
+  </Protocol>
+  <ChemistryDefinitions>
+    <ChemistryDefinition Name="CompleteCycle">
+      <ChemistryStep Description="Deblock" Repeat="1">
+        <PumpToFlowcell Solution="5" ReagentName="USB" AspirationRate="1500" DispenseRate="2500" Volume="40" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <Temp Temperature="60" Duration="0" />
+        <PumpToFlowcell Solution="0" ReagentName="CRM" AspirationRate="1000" DispenseRate="2500" Volume="110" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <Wait Duration="5000" />
+        <DispenseAndWait Solution="0" AspirationRate="0" DispenseRate="0" Volume="0" SolutionDelay="0" Duration="15000" ToPosition="0" />
+        <PumpToFlowcell Solution="8" ReagentName="CWM" AspirationRate="1000" DispenseRate="2500" Volume="24" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <Wait Duration="5000" />
+        <DispenseAndWait Solution="0" AspirationRate="0" DispenseRate="0" Volume="0" SolutionDelay="0" Duration="15000" ToPosition="0" />
+      </ChemistryStep>
+      <ChemistryStep Description="Buffer Wash" Repeat="1">
+        <PumpToFlowcell Solution="8" ReagentName="CWM" AspirationRate="1500" DispenseRate="2500" Volume="95" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <PumpToFlowcell Solution="6" ReagentName="USB" AspirationRate="1500" DispenseRate="2500" Volume="140" SolutionDelay="0" Duration="0" ToPosition="0" />
+      </ChemistryStep>
+      <ChemistryStep Description="Incorporation" Repeat="1">
+        <PumpToFlowcell Solution="0" ReagentName="IMT" AspirationRate="1000" DispenseRate="2500" Volume="110" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <Temp Temperature="65" Duration="0" />
+        <Wait Duration="25000" />
+        <PumpToFlowcell Solution="5" ReagentName="USB" AspirationRate="1000" DispenseRate="2500" Volume="24" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <Wait Duration="5000" />
+        <DispenseAndWait Solution="0" AspirationRate="0" DispenseRate="0" Volume="0" SolutionDelay="0" Duration="15000" ToPosition="0" />
+        <PumpToFlowcell Solution="5" ReagentName="USB" AspirationRate="1500" DispenseRate="2500" Volume="120" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <Temp Temperature="20" Duration="15000" />
+        <PumpToFlowcell Solution="0" ReagentName="USM" AspirationRate="750" DispenseRate="2500" Volume="75" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <Wait Duration="5000" />
+        <DispenseAndWait Solution="0" AspirationRate="0" DispenseRate="0" Volume="0" SolutionDelay="0" Duration="10000" ToPosition="0" />
+      </ChemistryStep>
+    </ChemistryDefinition>
+    <ChemistryDefinition Name="FirstBase">
+      <ChemistryStep Description="Incorporation" Repeat="1">
+        <DispenseAndWait Solution="0" AspirationRate="0" DispenseRate="0" Volume="0" SolutionDelay="0" Duration="1" ToPosition="0" />
+        <Temp Temperature="60" Duration="0" />
+        <PumpToFlowcell Solution="5" ReagentName="USB" AspirationRate="1500" DispenseRate="2500" Volume="120" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <PumpToFlowcell Solution="0" ReagentName="IMT" AspirationRate="1000" DispenseRate="2500" Volume="110" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <Temp Temperature="65" Duration="0" />
+        <Wait Duration="5000" />
+        <DispenseAndWait Solution="0" AspirationRate="0" DispenseRate="0" Volume="0" SolutionDelay="0" Duration="20000" ToPosition="0" />
+        <PumpToFlowcell Solution="5" ReagentName="USB" AspirationRate="1000" DispenseRate="2500" Volume="24" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <Wait Duration="5000" />
+        <DispenseAndWait Solution="0" AspirationRate="0" DispenseRate="0" Volume="0" SolutionDelay="0" Duration="15000" ToPosition="0" />
+        <PumpToFlowcell Solution="5" ReagentName="USB" AspirationRate="1500" DispenseRate="2500" Volume="120" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <Temp Temperature="20" Duration="15000" />
+        <PumpToFlowcell Solution="0" ReagentName="USM" AspirationRate="750" DispenseRate="2500" Volume="75" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <Wait Duration="5000" />
+        <DispenseAndWait Solution="0" AspirationRate="0" DispenseRate="0" Volume="0" SolutionDelay="0" Duration="10000" ToPosition="0" />
+      </ChemistryStep>
+    </ChemistryDefinition>
+    <ChemistryDefinition Name="EndDeblock">
+      <ChemistryStep Description="Deblock" Repeat="1">
+        <PumpToFlowcell Solution="5" ReagentName="USB" AspirationRate="1500" DispenseRate="2500" Volume="120" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <Temp Temperature="60" Duration="0" />
+        <PumpToFlowcell Solution="0" ReagentName="CRM" AspirationRate="1000" DispenseRate="2500" Volume="110" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <Wait Duration="5000" />
+        <DispenseAndWait Solution="0" AspirationRate="0" DispenseRate="0" Volume="0" SolutionDelay="0" Duration="40000" ToPosition="0" />
+        <PumpToFlowcell Solution="8" ReagentName="CWM" AspirationRate="1000" DispenseRate="2500" Volume="24" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <Wait Duration="5000" />
+        <DispenseAndWait Solution="0" AspirationRate="0" DispenseRate="0" Volume="0" SolutionDelay="0" Duration="35000" ToPosition="0" />
+        <PumpToFlowcell Solution="8" ReagentName="CWM" AspirationRate="1500" DispenseRate="2500" Volume="120" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <TempOff />
+      </ChemistryStep>
+    </ChemistryDefinition>
+    <ChemistryDefinition Name="ResumeChemistry">
+      <ChemistryStep Description="Prepare for scanning" Repeat="1">
+        <Temp Temperature="20" Duration="0" />
+        <PumpToFlowcell Solution="0" ReagentName="USM" AspirationRate="750" DispenseRate="2500" Volume="75" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <Temp Temperature="20" Duration="15000" />
+      </ChemistryStep>
+    </ChemistryDefinition>
+    <ChemistryDefinition Name="PauseChemistry">
+      <ChemistryStep Description="Pause flowcell" Repeat="1">
+        <PumpToFlowcell Solution="5" ReagentName="USB" AspirationRate="1500" DispenseRate="2500" Volume="100" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <Temp Temperature="20" Duration="0" />
+      </ChemistryStep>
+    </ChemistryDefinition>
+    <ChemistryDefinition Name="PostRun">
+      <ChemistryStep Description="Post-Run Flush" Repeat="1">
+        <Temp Temperature="20" Duration="0" />
+        <PumpToFlowcell Solution="2" ReagentName="PW1" AspirationRate="1500" DispenseRate="2500" Volume="2250" SolutionDelay="0" Duration="0" ToPosition="0" />
+      </ChemistryStep>
+    </ChemistryDefinition>
+    <ChemistryDefinition Name="PostRunForOnBoardClustering">
+      <ChemistryStep Description="Post-Run Flush" Repeat="1">
+        <Temp Temperature="20" Duration="0" />
+        <PumpToFlowcell Solution="2" ReagentName="PW1" AspirationRate="1000" DispenseRate="2500" Volume="2250" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <PumpToValvePosition Solution="2" ReagentName="PW1" AspirationRate="1000" DispenseRate="250" Volume="250" SolutionDelay="0" Duration="0" ToPosition="20" />
+        <PumpToFlowcell Solution="0" ReagentName="TMP" AspirationRate="1000" DispenseRate="2500" Volume="250" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <PumpToFlowcell Solution="2" ReagentName="PW1" AspirationRate="1000" DispenseRate="2500" Volume="1000" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <PumpToValvePosition Solution="2" ReagentName="PW1" AspirationRate="1000" DispenseRate="250" Volume="250" SolutionDelay="0" Duration="0" ToPosition="20" />
+      </ChemistryStep>
+    </ChemistryDefinition>
+    <ChemistryDefinition Name="IndexPreparation-i7">
+      <ChemistryStep Description="IndexPreparation-i7" Repeat="1">
+        <PumpToFlowcell Solution="0" ReagentName="FDR" AspirationRate="240" DispenseRate="2500" Volume="100" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <Temp Temperature="65" Duration="60000" />
+        <PumpToFlowcell Solution="5" ReagentName="USB" AspirationRate="1500" DispenseRate="2500" Volume="120" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <PumpToFlowcell Solution="0" ReagentName="HP9" AspirationRate="1500" DispenseRate="2500" Volume="500" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <PumpToFlowcell Solution="0" ReagentName="HP9" AspirationRate="60" DispenseRate="2500" Volume="75" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <Temp Temperature="40" Duration="60000" />
+        <PumpToFlowcell Solution="0" ReagentName="HP9" AspirationRate="60" DispenseRate="2500" Volume="25" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <Wait Duration="300000" />
+        <PumpToFlowcell Solution="5" ReagentName="USB" AspirationRate="1500" DispenseRate="2500" Volume="120" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <Temp Temperature="20" Duration="0" />
+      </ChemistryStep>
+    </ChemistryDefinition>
+    <ChemistryDefinition Name="IndexPreparation-i5-SR">
+      <ChemistryStep Description="IndexPreparation-i5-SR" Repeat="1">
+        <PumpToFlowcell Solution="0" ReagentName="FDR" AspirationRate="240" DispenseRate="2500" Volume="100" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <Temp Temperature="65" Duration="60000" />
+        <PumpToFlowcell Solution="5" ReagentName="USB" AspirationRate="1500" DispenseRate="2500" Volume="120" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <PumpToFlowcell Solution="0" ReagentName="HP10" AspirationRate="1500" DispenseRate="2500" Volume="500" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <PumpToFlowcell Solution="0" ReagentName="HP10" AspirationRate="60" DispenseRate="2500" Volume="75" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <Temp Temperature="40" Duration="60000" />
+        <PumpToFlowcell Solution="0" ReagentName="HP10" AspirationRate="60" DispenseRate="2500" Volume="25" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <Wait Duration="300000" />
+        <PumpToFlowcell Solution="5" ReagentName="USB" AspirationRate="1500" DispenseRate="2500" Volume="120" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <Temp Temperature="20" Duration="0" />
+      </ChemistryStep>
+    </ChemistryDefinition>
+    <ChemistryDefinition Name="CBotTempHybSR">
+      <ChemistryStep Description="Amp-TempRamp" Repeat="1">
+        <Temp Temperature="55" Duration="0" />
+      </ChemistryStep>
+      <ChemistryStep Description="Amplification1" Repeat="28">
+        <PumpToFlowcell Solution="0" ReagentName="FDR" AspirationRate="120" DispenseRate="2500" Volume="28" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <PumpToFlowcell Solution="0" ReagentName="FPM" AspirationRate="120" DispenseRate="2500" Volume="28" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <PumpToFlowcell Solution="0" ReagentName="AMS" AspirationRate="120" DispenseRate="2500" Volume="72" SolutionDelay="0" Duration="0" ToPosition="0" />
+      </ChemistryStep>
+      <ChemistryStep Description="Postamplificationwash" Repeat="1">
+        <PumpToFlowcell Solution="5" ReagentName="USB" AspirationRate="1500" DispenseRate="2500" Volume="120" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <Temp Temperature="20" Duration="0" />
+      </ChemistryStep>
+      <ChemistryStep Description="LinearizationSR" Repeat="1">
+        <Temp Temperature="20" Duration="0" />
+        <PumpToFlowcell Solution="0" ReagentName="FLS" AspirationRate="1500" DispenseRate="2500" Volume="500" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <PumpToFlowcell Solution="0" ReagentName="FLS" AspirationRate="15" DispenseRate="2500" Volume="125" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <PumpToFlowcell Solution="5" ReagentName="USB" AspirationRate="1500" DispenseRate="2500" Volume="120" SolutionDelay="0" Duration="0" ToPosition="0" />
+      </ChemistryStep>
+	  <ChemistryStep Description="SBS Prime" Repeat="1">
+        <Temp Temperature="20" Duration="0" />
+        <PumpToFlowcell Solution="0" ReagentName="IMT" AspirationRate="1500" DispenseRate="2500" Volume="500" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <PumpToFlowcell Solution="0" ReagentName="USM" AspirationRate="1500" DispenseRate="2500" Volume="500" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <PumpToFlowcell Solution="0" ReagentName="CRM" AspirationRate="1500" DispenseRate="2500" Volume="500" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <PumpToFlowcell Solution="8" ReagentName="CWM" AspirationRate="1500" DispenseRate="2500" Volume="500" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <PumpToFlowcell Solution="6" ReagentName="USB" AspirationRate="1500" DispenseRate="2500" Volume="500" SolutionDelay="0" Duration="0" ToPosition="0" />
+      </ChemistryStep>
+      <ChemistryStep Description="Denaturation-Hybridization" Repeat="1">
+        <PumpToFlowcell Solution="0" ReagentName="FDR" AspirationRate="240" DispenseRate="2500" Volume="100" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <Temp Temperature="65" Duration="60000" />
+        <PumpToFlowcell Solution="5" ReagentName="USB" AspirationRate="1500" DispenseRate="2500" Volume="120" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <PumpToFlowcell Solution="0" ReagentName="HP10" AspirationRate="1500" DispenseRate="2500" Volume="500" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <PumpToFlowcell Solution="0" ReagentName="HP10" AspirationRate="60" DispenseRate="2500" Volume="75" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <Temp Temperature="40" Duration="60000" />
+        <PumpToFlowcell Solution="0" ReagentName="HP10" AspirationRate="60" DispenseRate="2500" Volume="25" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <Wait Duration="300000" />
+        <PumpToFlowcell Solution="5" ReagentName="USB" AspirationRate="1500" DispenseRate="2500" Volume="120" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <Temp Temperature="20" Duration="0" />
+      </ChemistryStep>
+      <ChemistryStep Description="extenprepwith2bases" Repeat="1">
+        <DispenseAndWait Solution="0" AspirationRate="0" DispenseRate="0" Volume="0" SolutionDelay="0" Duration="1" ToPosition="0" />
+        <Temp Temperature="60" Duration="0" />
+        <PumpToFlowcell Solution="5" ReagentName="USB" AspirationRate="1500" DispenseRate="2500" Volume="120" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <PumpToFlowcell Solution="0" ReagentName="IMT" AspirationRate="1000" DispenseRate="2500" Volume="110" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <Temp Temperature="65" Duration="0" />
+        <Wait Duration="5000" />
+        <DispenseAndWait Solution="0" AspirationRate="0" DispenseRate="0" Volume="0" SolutionDelay="0" Duration="20000" ToPosition="0" />
+        <PumpToFlowcell Solution="5" ReagentName="USB" AspirationRate="1000" DispenseRate="2500" Volume="24" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <Wait Duration="5000" />
+        <DispenseAndWait Solution="0" AspirationRate="0" DispenseRate="0" Volume="0" SolutionDelay="0" Duration="15000" ToPosition="0" />
+        <PumpToFlowcell Solution="5" ReagentName="USB" AspirationRate="1500" DispenseRate="2500" Volume="120" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <Temp Temperature="20" Duration="15000" />
+        <PumpToFlowcell Solution="0" ReagentName="USM" AspirationRate="1500" DispenseRate="2500" Volume="75" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <Wait Duration="5000" />
+        <DispenseAndWait Solution="0" AspirationRate="0" DispenseRate="0" Volume="0" SolutionDelay="0" Duration="10000" ToPosition="0" />
+        <PumpToFlowcell Solution="5" ReagentName="USB" AspirationRate="1500" DispenseRate="2500" Volume="120" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <Temp Temperature="60" Duration="0" />
+        <PumpToFlowcell Solution="0" ReagentName="CRM" AspirationRate="1000" DispenseRate="2500" Volume="110" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <Wait Duration="5000" />
+        <DispenseAndWait Solution="0" AspirationRate="0" DispenseRate="0" Volume="0" SolutionDelay="0" Duration="10000" ToPosition="0" />
+        <PumpToFlowcell Solution="8" ReagentName="CWM" AspirationRate="1000" DispenseRate="2500" Volume="24" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <Wait Duration="5000" />
+        <DispenseAndWait Solution="0" AspirationRate="0" DispenseRate="0" Volume="0" SolutionDelay="0" Duration="5000" ToPosition="0" />
+        <PumpToFlowcell Solution="8" ReagentName="CWM" AspirationRate="1500" DispenseRate="2500" Volume="95" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <PumpToFlowcell Solution="6" ReagentName="USB" AspirationRate="1500" DispenseRate="2500" Volume="140" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <PumpToFlowcell Solution="0" ReagentName="IMT" AspirationRate="1000" DispenseRate="2500" Volume="110" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <Temp Temperature="65" Duration="0" />
+        <Wait Duration="25000" />
+        <PumpToFlowcell Solution="5" ReagentName="USB" AspirationRate="1000" DispenseRate="2500" Volume="24" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <Wait Duration="5000" />
+        <DispenseAndWait Solution="0" AspirationRate="0" DispenseRate="0" Volume="0" SolutionDelay="0" Duration="15000" ToPosition="0" />
+        <PumpToFlowcell Solution="5" ReagentName="USB" AspirationRate="1500" DispenseRate="2500" Volume="120" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <Temp Temperature="20" Duration="15000" />
+        <PumpToFlowcell Solution="0" ReagentName="USM" AspirationRate="1500" DispenseRate="2500" Volume="75" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <Wait Duration="5000" />
+        <DispenseAndWait Solution="0" AspirationRate="0" DispenseRate="0" Volume="0" SolutionDelay="0" Duration="10000" ToPosition="0" />
+        <PumpToFlowcell Solution="5" ReagentName="USB" AspirationRate="1500" DispenseRate="2500" Volume="120" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <Temp Temperature="60" Duration="0" />
+        <PumpToFlowcell Solution="0" ReagentName="CRM" AspirationRate="1000" DispenseRate="2500" Volume="110" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <Wait Duration="5000" />
+        <DispenseAndWait Solution="0" AspirationRate="0" DispenseRate="0" Volume="0" SolutionDelay="0" Duration="40000" ToPosition="0" />
+        <PumpToFlowcell Solution="8" ReagentName="CWM" AspirationRate="1000" DispenseRate="2500" Volume="24" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <Wait Duration="5000" />
+        <DispenseAndWait Solution="0" AspirationRate="0" DispenseRate="0" Volume="0" SolutionDelay="0" Duration="35000" ToPosition="0" />
+        <PumpToFlowcell Solution="8" ReagentName="CWM" AspirationRate="1500" DispenseRate="2500" Volume="120" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <Temp Temperature="20" Duration="0" />
+        <PumpToFlowcell Solution="5" ReagentName="USB" AspirationRate="1500" DispenseRate="2500" Volume="120" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <PumpToFlowcell Solution="0" ReagentName="KLE" AspirationRate="1500" DispenseRate="2500" Volume="150" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <PumpToFlowcell Solution="0" ReagentName="RX1" AspirationRate="1500" DispenseRate="2500" Volume="150" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <PumpToFlowcell Solution="0" ReagentName="RX1" AspirationRate="1000" DispenseRate="2500" Volume="100" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <Temp Temperature="37" Duration="120000" />
+        <PumpToFlowcell Solution="0" ReagentName="RX1" AspirationRate="1000" DispenseRate="2500" Volume="150" SolutionDelay="0" Duration="0" ToPosition="0" />
+		<Wait Duration="120000" />
+      </ChemistryStep>
+      <ChemistryStep Description="exten" Repeat="12">
+        <PumpToFlowcell Solution="0" ReagentName="RX1" AspirationRate="1000" DispenseRate="2500" Volume="75" SolutionDelay="0" Duration="0" ToPosition="0" />
+		<Wait Duration="120000" />
+      </ChemistryStep>
+      <ChemistryStep Description="extenfinish" Repeat="1">
+        <Temp Temperature="20" Duration="0" />
+        <PumpToFlowcell Solution="0" ReagentName="HT3" AspirationRate="1500" DispenseRate="2500" Volume="150" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <PumpToFlowcell Solution="0" ReagentName="HT3" AspirationRate="1500" DispenseRate="2500" Volume="75" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <PumpToFlowcell Solution="0" ReagentName="HT1" AspirationRate="1500" DispenseRate="2500" Volume="150" SolutionDelay="0" Duration="0" ToPosition="0" />
+        <PumpToFlowcell Solution="0" ReagentName="HT1" AspirationRate="1500" DispenseRate="2500" Volume="75" SolutionDelay="0" Duration="0" ToPosition="0" />
+	  </ChemistryStep>
+	</ChemistryDefinition>
+  </ChemistryDefinitions>
+  <PumpDefinitions>
+    <PumpDefinition Name="Default">
+      <BeforeImagingEachLane Enabled="false">
+        <Lane Solution="3" AspirationRate="120" DispenseRate="2500" Volume="12" SolutionDelay="0" Duration="0" ToPosition="0" Num="1" Surface="Bottom" />
+        <Lane Solution="3" AspirationRate="120" DispenseRate="2500" Volume="12" SolutionDelay="0" Duration="0" ToPosition="0" Num="5" />
+      </BeforeImagingEachLane>
+    </PumpDefinition>
+  </PumpDefinitions>
+  <ReadDefinitions>
+    <ReadDefinition Name="Read1" IsIndex="false" ForTemplateOnly="false">
+      <Imaging ChemistryName="FirstBase" VariabilityName="Read1" Cycles="1" />
+      <Imaging ChemistryName="CompleteCycle" VariabilityName="Read1" Cycles="39" />
+      <Chemistry ChemistryName="End" />
+    </ReadDefinition>
+    <ReadDefinition Name="IndexRead-i7" IsIndex="true" ForTemplateOnly="false">
+      <Imaging ChemistryName="FirstBase" VariabilityName="IndexRead" Cycles="1" />
+      <Imaging ChemistryName="CompleteCycle" VariabilityName="IndexRead" Cycles="6" />
+      <Chemistry ChemistryName="End" />
+    </ReadDefinition>
+    <ReadDefinition Name="Read2" IsIndex="false" ForTemplateOnly="false">
+      <Imaging ChemistryName="FirstBase" VariabilityName="IndexRead" Cycles="1" />
+      <Imaging ChemistryName="CompleteCycle" VariabilityName="IndexRead" Cycles="249" />
+      <Chemistry ChemistryName="End" />
+    </ReadDefinition>
+  </ReadDefinitions>
+  <PrimeDefinitions>
+    <PrimeDefinition Name="SbsPrime">
+      <Prime Solution="10" AspirationRate="0" DispenseRate="0" Volume="0" SolutionDelay="0" Duration="0" ToPosition="0" />
+      <Prime Solution="10" AspirationRate="0" DispenseRate="0" Volume="0" SolutionDelay="0" Duration="0" ToPosition="0" />
+      <Prime Solution="10" AspirationRate="0" DispenseRate="0" Volume="0" SolutionDelay="0" Duration="0" ToPosition="0" />
+      <Prime Solution="10" AspirationRate="0" DispenseRate="0" Volume="0" SolutionDelay="0" Duration="0" ToPosition="0" />
+      <Prime Solution="11" AspirationRate="0" DispenseRate="0" Volume="0" SolutionDelay="0" Duration="0" ToPosition="0" />
+      <Prime Solution="11" AspirationRate="0" DispenseRate="0" Volume="0" SolutionDelay="0" Duration="0" ToPosition="0" />
+      <Prime Solution="11" AspirationRate="0" DispenseRate="0" Volume="0" SolutionDelay="0" Duration="0" ToPosition="0" />
+      <Prime Solution="11" AspirationRate="0" DispenseRate="0" Volume="0" SolutionDelay="0" Duration="0" ToPosition="0" />
+      <Prime Solution="12" AspirationRate="0" DispenseRate="0" Volume="0" SolutionDelay="0" Duration="0" ToPosition="0" />
+      <Prime Solution="12" AspirationRate="0" DispenseRate="0" Volume="0" SolutionDelay="0" Duration="0" ToPosition="0" />
+      <Prime Solution="12" AspirationRate="0" DispenseRate="0" Volume="0" SolutionDelay="0" Duration="0" ToPosition="0" />
+      <Prime Solution="12" AspirationRate="0" DispenseRate="0" Volume="0" SolutionDelay="0" Duration="0" ToPosition="0" />
+      <Prime Solution="17" AspirationRate="0" DispenseRate="0" Volume="0" SolutionDelay="0" Duration="0" ToPosition="0" />
+      <Prime Solution="17" AspirationRate="0" DispenseRate="0" Volume="0" SolutionDelay="0" Duration="0" ToPosition="0" />
+      <Prime Solution="17" AspirationRate="0" DispenseRate="0" Volume="0" SolutionDelay="0" Duration="0" ToPosition="0" />
+      <Prime Solution="17" AspirationRate="0" DispenseRate="0" Volume="0" SolutionDelay="0" Duration="0" ToPosition="0" />
+      <Prime Solution="15" AspirationRate="0" DispenseRate="0" Volume="0" SolutionDelay="0" Duration="0" ToPosition="0" />
+      <Prime Solution="15" AspirationRate="0" DispenseRate="0" Volume="0" SolutionDelay="0" Duration="0" ToPosition="0" />
+      <Prime Solution="15" AspirationRate="0" DispenseRate="0" Volume="0" SolutionDelay="0" Duration="0" ToPosition="0" />
+      <Prime Solution="15" AspirationRate="0" DispenseRate="0" Volume="0" SolutionDelay="0" Duration="0" ToPosition="0" />
+      <Prime Solution="5" AspirationRate="0" DispenseRate="0" Volume="0" SolutionDelay="0" Duration="0" ToPosition="0" />
+      <Prime Solution="5" AspirationRate="0" DispenseRate="0" Volume="0" SolutionDelay="0" Duration="0" ToPosition="0" />
+      <Prime Solution="5" AspirationRate="0" DispenseRate="0" Volume="0" SolutionDelay="0" Duration="0" ToPosition="0" />
+      <Prime Solution="5" AspirationRate="0" DispenseRate="0" Volume="0" SolutionDelay="0" Duration="0" ToPosition="0" />
+    </PrimeDefinition>
+  </PrimeDefinitions>
+  <ReagentDefinitions>
+    <ReagentDefinition Name="SbsReagents" IsPairedEnd="true">
+      <Reagent Name="IMT" Description="Incorporation Mix" ViciPosition="1">
+        <Sample>false</Sample>
+      </Reagent>
+      <Reagent Name="PW1" Description="250mL bottle with laboratory grade water" ViciPosition="2">
+        <Sample>false</Sample>
+      </Reagent>
+      <Reagent Name="USM" Description="Universal Scan Mix" ViciPosition="3">
+        <Sample>false</Sample>
+      </Reagent>
+      <Reagent Name="PW1" Description="250mL bottle with laboratory grade water" ViciPosition="4">
+        <Sample>false</Sample>
+      </Reagent>
+      <Reagent Name="USB" Description="Universal Sequencing Buffer" ViciPosition="5">
+        <Sample>false</Sample>
+      </Reagent>
+      <Reagent Name="USB" Description="Universal Sequencing Buffer" ViciPosition="6">
+        <Sample>false</Sample>
+      </Reagent>
+      <Reagent Name="CRM" Description="Cleavage Reagent Mastermix" ViciPosition="7">
+        <Sample>false</Sample>
+      </Reagent>
+      <Reagent Name="CWM" Description="Cleavage Wash Mix" ViciPosition="8">
+        <Sample>false</Sample>
+      </Reagent>
+      <Reagent Name="KLE" Description="Kneow Buffer" ViciPosition="10">
+        <Sample>false</Sample>
+      </Reagent>
+      <Reagent Name="RX1" Description="Reaction Mix" ViciPosition="11">
+        <Sample>false</Sample>
+      </Reagent>
+      <Reagent Name="HT3" Description="HT1 PLUS EDTA" ViciPosition="12">
+        <Sample>false</Sample>
+      </Reagent>
+      <Reagent Name="AMS" Description="Fast Amplification Mix" ViciPosition="13">
+        <Sample>false</Sample>
+      </Reagent>
+      <Reagent Name="FPM" Description="Fast Amplification PreMix" ViciPosition="14">
+        <Sample>false</Sample>
+      </Reagent>
+      <Reagent Name="FDR" Description="Fast Denaturation Reagent" ViciPosition="15">
+        <Sample>false</Sample>
+      </Reagent>
+      <Reagent Name="HP9" Description="Index Sequencing Primer" ViciPosition="16">
+        <Sample>false</Sample>
+      </Reagent>
+      <Reagent Name="HT1" Description="HT1 Buffer" ViciPosition="17">
+        <Sample>false</Sample>
+      </Reagent>
+      <Reagent Name="HP10" Description="Sequencing Primer Mix For Read 1 and 2" ViciPosition="18">
+        <Sample>false</Sample>
+      </Reagent>
+      <Reagent Name="FLS" Description="Fast Linearization Solution" ViciPosition="19">
+        <Sample>false</Sample>
+      </Reagent>
+      <Reagent Name="TMP" Description="Template" ViciPosition="20">
+        <Sample>false</Sample>
+      </Reagent>
+    </ReagentDefinition>
+  </ReagentDefinitions>
+  <CycleWaitDefinitions />
+</RecipeFile>

@@ -1,6 +1,6 @@
 # PAL-Seq
 
-This pipeline aligns reads from PAL-Seq v2, find the 3' ends of transcripts, and estimates poly(A)-tail lengths.
+This pipeline aligns reads from Tail-Seq and PAL-seq v2. For PAL-seq data, it also finds the 3' ends of transcripts. It outputs poly(A)-tail lengths.
 
 Requirements:
 - Python 3.4 or above
@@ -14,8 +14,8 @@ pip install -r requirements.txt
 
 Input files:
 - genomeDir: directory of STAR index (optional if you use a different aligner)
-- fastq1: fastq file from read1, gzipped
-- fastq2: fastq file from read2, gzipped
+- fastq1: fastq file from read1, gzipped (in a .tar.gz file format)
+- fastq2: fastq file from read2, gzipped (in a .tar.gz file format)
 - gff: gene annotations in gff format
 - intensity: raw intensity values for read2, gzipped
 - standard_file: tab-delimited file where the first column is the standard sequence and the second column is the name of the standard. If not using, set to "none"

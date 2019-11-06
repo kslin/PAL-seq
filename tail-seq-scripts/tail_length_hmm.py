@@ -12,16 +12,20 @@ import pandas as pd
 import config
 import tail_length_helpers
 
-
 if __name__ == '__main__':
 
     parser = OptionParser()
     parser.add_option("-s", dest="SIGNAL", help="signal file output from get_signal.py")
     parser.add_option("-o", "--outdir", dest="OUTDIR", help="output directory")
-    parser.add_option("--twostate", action="store_true", dest="TWOSTATE", default=True, help="toggle for 2-state model")
+    parser.add_option("--twostate", dest="TWOSTATE", default=True, help="toggle for 2-state model")
     parser.add_option("-f", "--futures", dest="FUTURES", type="int", default=1, help="number of threads to use")
 
     (options, args) = parser.parse_args()
+    #parse the boolean here
+    if options.TWOSTATE=='True': options.TWOSTATE=True
+    elif options.TWOSTATE=='False': options.TWOSTATE=False
+    else: options.TWOSTATE=True
+
 
     print("Writing tail-length outputs to {}".format(options.OUTDIR))
 
@@ -91,12 +95,20 @@ if __name__ == '__main__':
         # extract signal
         for line in lines:
             line = line[:-1].split('\t') # remove newline character and split by tab
+            line = tail_length_helpers.smooth(line)
             ids.append(line[0])
-            tail_start = int(line[1])
+            tail_start = int(float(line[1]))
             signals.append([config.START_SIGNAL])
             for val in line[2 + tail_start:]:
                 signals.append([float(val)])
-
+            # if line[0] == '1101:13993:2125':
+            #     print("ID found, line 1:")
+            #     print(line)
+            #     print(line[0])
+            #     print(config.START_SIGNAL)
+            #     print(tail_start)
+            #     print(config.LEN2 - tail_start + 1)
+            #     FinalIdentifier = i #Marks the index where the read occurs.
             lengths.append(config.LEN2 - tail_start + 1)
 
         # predict states
@@ -110,7 +122,14 @@ if __name__ == '__main__':
             single_emission = emissions[start_ix: start_ix + length]
             tail_lengths.append(tail_length_helpers.get_tail_length_from_emissions(single_emission, options.TWOSTATE))
             start_ix += length
-
+        #     if i == FinalIdentifier:
+        #         print("ID found, line 2:")
+        #         print(start_ix)
+        #         print(length)
+        #         print(single_emission)
+        # if '1101:13993:2125' in ids:
+        #     print("ID found, line 3:")
+        #     print(tail_lengths[ids.index('1101:13993:2125')]) 
         return ids, tail_lengths
 
     # read in signals as chunks and calculate viterbi emissions
