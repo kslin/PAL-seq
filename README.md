@@ -21,9 +21,9 @@ Input files:
 - standard_file: tab-delimited file where the first column is the standard sequence and the second column is the name of the standard. If not using, set to "none"
 - outdir: directory for output files
 
-1. Check run configurations in tail-seq-scripts/config.py. Check STAR parameters in Makefile.
+1. Check run configurations in pal-seq-scripts/config.py. Check STAR parameters in Makefile.
 2. Make an output directory.
-3. Navigate to the tail-seq directory and run all scripts at once:
+3. Navigate to the pal-seq directory and run all scripts at once:
 ```
 make genomeDir=<genomeDir> fastq1=<fastq1> fastq2=<fastq2> gff=<gff> intensity=<intensity> standard_file=<standard_file> outdir=<outdir> all
 ```
@@ -35,7 +35,7 @@ make fastq1=<fastq1> fastq2=<fastq2> gff=<gff> intensity=<intensity> standard_fi
 
 -- OR --
 
-3. Align to genome. To use STAR with our parameters, navigate to the tail-seq directory and run:
+3. Align to genome. To use STAR with our parameters, navigate to the pal-seq directory and run:
 ```
 make genomeDir=<path to STAR index> fastq1=<path to fastq1> outdir=<path to output directory> align-to-genome
 ```
@@ -50,16 +50,16 @@ make gff=<path to gff file> outdir=<path to output directory> intersect-gff
 - normalize_t_signal.txt: normalized T-signal for reads that will be called with an HMM.
 - logfile.txt: Information about how long each step takes and how many reads are dropped at each step.
 ```
-python tail-seq-scripts/get_signal_from_raw.py --f1 <fastq1> --f2 <fastq2> -i <intensity> -s <standard_file> -o <outdir>
+python pal-seq-scripts/get_signal_from_raw.py --f1 <fastq1> --f2 <fastq2> -i <intensity> -s <standard_file> -o <outdir>
 ```
 6. Train HMM and call tail lengths. Outputs:
 - tail_lengths.txt: Tail length, 3' end location, and tail-calling method (HMM or manual for short tails) for every read. For reads that come from standards, the chromosome is set to "standard", the chromosome location is set to 0, and the strand is set to "+".
 ```
-python tail-seq-scripts/tail_length_hmm.py -o <outdir>
+python pal-seq-scripts/tail_length_hmm.py -o <outdir>
 ```
 7. Calculate and plot summaries. plot_t_signals.py plots a heatmap of normalized T-signal densities. 
 ```
-python tail-seq-scripts/plot_t_signals.py -o <outdir>
+python pal-seq-scripts/plot_t_signals.py -o <outdir>
 ```
 Here is an example:
 
@@ -68,7 +68,7 @@ Here is an example:
 summarize_results.py computes mean and median tails lengths for each accession and plots CDFs of standards (if a standard file was given earlier)
 
 ```
-python tail-seq-scripts/summarize_results.py -o <outdir>
+python pal-seq-scripts/summarize_results.py -o <outdir>
 ```
 
 Here is an example:
