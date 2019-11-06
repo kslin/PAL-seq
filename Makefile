@@ -49,6 +49,7 @@ signal-from-raw: ## generate normalized fluorscent signal for each read.
 
 pal-seq: ## 
 	python3 /lab/solexa_bartel/teisen/RNAseq/Scripts/PALseqV3/tail-seq-scripts/tail_length_lin_mod.py -o $(outdir)
+
 plot-model:
 	head -1 $(outdir)/tail_lengths.txt > $(outdir)/standard_tail_lengths.txt
 	head -1 $(outdir)/tail_lengths.txt > $(outdir)/mapped_tail_lengths_stds_removed.txt

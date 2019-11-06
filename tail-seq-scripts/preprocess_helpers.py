@@ -28,7 +28,6 @@ def dedup_bed(bedfile, ANNO_TYPE = False):
 
     # split into plus and minus strand reads and sort each by 3' end
     columns = ['chr','3p_end','read_ID','strand','accession']
-
     if not ANNO_TYPE:
         plus = bedfile[bedfile[18] == '+'][[0,2,3,18,20]].sort_values(2, ascending=False)
         plus.columns = columns
@@ -36,9 +35,9 @@ def dedup_bed(bedfile, ANNO_TYPE = False):
         minus.columns = columns
 
     if ANNO_TYPE: #takes a bedfile format
-        plus = bedfile[bedfile[5] == '+'][[0,2,3,5,15]].sort_values(2, ascending=False)
+        plus = bedfile[bedfile[5] == '+'][[0,2,3,5,21]].sort_values(2, ascending=False)
         plus.columns = columns
-        minus = bedfile[bedfile[5] == '-'][[0,1,3,5,15]].sort_values(1, ascending=True)
+        minus = bedfile[bedfile[5] == '-'][[0,1,3,5,21]].sort_values(1, ascending=True)
         minus.columns = columns
 
     # for reads that map to multiple exons of the same transcript, take later exon
