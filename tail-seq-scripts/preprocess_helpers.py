@@ -35,9 +35,9 @@ def dedup_bed(bedfile, ANNO_TYPE = False):
         minus.columns = columns
 
     if ANNO_TYPE: #takes a bedfile format
-        plus = bedfile[bedfile[5] == '+'][[0,2,3,5,21]].sort_values(2, ascending=False)
+        plus = bedfile[bedfile[5] == '+'][[0,2,3,5,15]].sort_values(2, ascending=False)
         plus.columns = columns
-        minus = bedfile[bedfile[5] == '-'][[0,1,3,5,21]].sort_values(1, ascending=True)
+        minus = bedfile[bedfile[5] == '-'][[0,1,3,5,15]].sort_values(1, ascending=True)
         minus.columns = columns
 
     # for reads that map to multiple exons of the same transcript, take later exon

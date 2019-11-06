@@ -39,7 +39,7 @@ if __name__ == '__main__':
 
     # dedup bed input and write dropped reads
     if not options.ANNO_TYPE: bed_output = pd.read_csv(bedfile, sep='\t', header=None, usecols=[0,1,2,3,18,20], engine='c')
-    if options.ANNO_TYPE: bed_output = pd.read_csv(bedfile, sep='\t', header=None, usecols=[0,1,2,3,5,21], engine='c')
+    if options.ANNO_TYPE: bed_output = pd.read_csv(bedfile, sep='\t', header=None, usecols=[0,1,2,3,5,15], engine='c')
     bed_output[3] = [config.fastq_header_to_ID(x) for x in bed_output[3]]
     reads_dedup, dropped_reads = preprocess_helpers.dedup_bed(bed_output, options.ANNO_TYPE)
 
