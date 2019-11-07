@@ -1,17 +1,13 @@
-import concurrent.futures
 from optparse import OptionParser
 import os
 import sys
 import time
-import warnings
 
-import numpy as np
 import pandas as pd
 
-import config
 import tail_length_helpers
 
-import pdb 
+import pdb
 
 if __name__ == '__main__':
 
@@ -23,12 +19,11 @@ if __name__ == '__main__':
 
     (options, args) = parser.parse_args()
 
-
-
     print("Writing tail-length outputs to {}".format(options.OUTDIR))
 
     # find how long the signal file is
-    logfile = pd.read_csv(os.path.join(options.OUTDIR, 'logfile.txt'), sep='\t', header=None, index_col=0)
+    logfile = pd.read_csv(os.path.join(options.OUTDIR, 'logfile.txt'), \
+        sep='\t', header=None, index_col=0)
     file_length = int(logfile.loc['Reads for HMM'][1])
 
     # quit if file too small
@@ -65,16 +60,15 @@ if __name__ == '__main__':
 
 
     # create linear model, returns an array with the linear model parameters.
-    LinRegArr = tail_length_helpers.train_model(training_array_dict,model_params_file,std_meds_file)
+    LinRegArr, KrObj = tail_length_helpers.train_model(training_array_dict,model_params_file,std_meds_file)
 
     print('{:.3f} seconds'.format(time.time() - t0))
     print("Calculating tail-lengths...")
     t0 = time.time()
 
     #may not need parallelization.
-    all_ids, all_tls = tail_length_helpers.get_batch_tail_length(signal_file,LinRegArr)
+    all_ids, all_tls = tail_length_helpers.get_batch_tail_length(signal_file, KrObj)
     print('{:.3f} seconds'.format(time.time() - t0))
-
 
     # creat DataFrame of tail length values
     tail_length_df = pd.DataFrame({'read_ID': all_ids, 'tail_length': all_tls, 'method': 'LM'}).set_index('read_ID')

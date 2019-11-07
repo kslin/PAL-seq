@@ -5,6 +5,7 @@ import config
 import pdb
 import scipy.stats as ss
 import sys
+import statsmodels.nonparametric.kernel_regression as kr
 
 def read_training_set(infile):
     """
@@ -24,8 +25,12 @@ def read_training_set(infile):
 
 
 def train_model(training_array_dict, training_param_file, med_param_file):
-    """
-    Get linear model parameters.
+    """Get linear model parameters.
+    (Or LOESS interpolation.)
+    Keyword arguments
+        training_array_dict: dictionary of intensities for each standard
+        training_param_file: output file path for the training parameters
+        med_param_file: output file path for the normalized intensities
     """
     
     medList = [] #median dict
@@ -49,30 +54,38 @@ def train_model(training_array_dict, training_param_file, med_param_file):
     #linear regression
     LinRegTup = [ss.linregress(medArr[:,(0,(1+i))])[:] for i in range(config.NUM_SKIP_2)]
 
+    #Kernel regression.
+    KrObj = kr.KernelReg(medArr[:,0:1], medArr[:,2:3], 'c', 'll')
+
     #slope, intercept, r_value, p_value, std_err
     LinRegArr = np.array(LinRegTup)
     np.savetxt(med_param_file, medArr, header = "\t".join(['nucleotide_length'] + ['conc_' + str(i) for i in range(config.NUM_SKIP_2)]),comments = '',delimiter = '\t') 
     np.savetxt(training_param_file, LinRegArr, header = "\t".join(['slope', 'intercept', 'r_value', 'p_value', 'std_err']),comments = '',delimiter = '\t') 
 
-    return(LinRegArr)
+    return(LinRegArr, KrObj)
 
-def get_batch_tail_length(signal_file, LinRegArr):
+def get_batch_tail_length(signal_file, KrObj):
     """
     Given a signal file, use the model to calculate tail lengths
     """
     # extract metadata
-    ids, lengths = [], []
+    ids, lengths, signal_arr, preExtT_arr = [], [], [], []
 
     with open(signal_file, 'r') as sf:
-        for line in sf:
+        for index, line in enumerate(sf):
             read_ID = line.split("\t")[0]
             preExtTl = int(line.split("\t")[1]) #nucleotides of tail prior to extension
             signal = float(line.split("\t")[2 + config.OPTIM_CONC])
-
+            signal_arr.append(signal)
+            preExtT_arr.append(preExtTl)
             #calculate tail length
-            tl = (signal - LinRegArr[config.OPTIM_CONC,1]) / LinRegArr[config.OPTIM_CONC,0] + preExtTl
-
+            # tl = (signal - LinRegArr[config.OPTIM_CONC,1]) / LinRegArr[config.OPTIM_CONC,0] + preExtTl
             ids.append(read_ID)
-            lengths.append(tl)
-    
+            if index != 0 and index % 10000 == 0:
+                tl = KrObj.fit(np.array(signal_arr))[0] + np.array(preExtT_arr)
+                lengths += tl.tolist()
+                signal_arr = []
+                preExtT_arr = []
+        tl = KrObj.fit(np.array(signal_arr))[0] + np.array(preExtT_arr)
+        lengths += tl.tolist()
     return ids, lengths

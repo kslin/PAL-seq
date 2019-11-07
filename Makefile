@@ -75,8 +75,6 @@ testing: signal-from-raw pal-seq plot-model summary
 
 # all_from_bam: intersect-gff filter_bam signal-from-raw signal-plot tail-seq summary ## Run without STAR aligning
 
-# all_from_bed: signal-from-raw signal-plot tail-seq summary ##Run without intersect
-
 # all_hmm: tail-seq summary 
 
 # all-plots: signal-plot summary ## Run all plotting
