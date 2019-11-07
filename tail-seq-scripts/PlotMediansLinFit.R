@@ -35,8 +35,11 @@ pStdCDF <- ggplot(data = AllTagsStds, aes(x = tail_length, color = as.factor(acc
 	geom_vline(xintercept = unique(as.numeric(as.character(AllTagsStds$accession))) + 12, linetype = 'dashed',color = 'grey') +
 	theme_tim_label()
 
+AllTags[AllTags$tail_length > 300,]$tail_length = 300
 pReadHist <- ggplot(data = AllTags, aes(x = tail_length)) + 
-	geom_histogram(bins = 400) + 
+	geom_histogram(binwidth = 1) + 
+	scale_x_continuous(expand = c(0,0), breaks = c(0:6)*50, labels = c(0:6)*50) +
+	scale_y_continuous(expand = c(0,0)) +
 	theme_tim_label()
 
 ggsave(plot = pFit, file = paste0(args[1],'/BestFitModels.pdf'), width = 2, height = 8)

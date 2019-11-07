@@ -27,6 +27,7 @@ if __name__ == '__main__':
 
     parser = OptionParser()
     parser.add_option("-o", dest="OUTDIR", help="plotting file")
+    parser.add_option("-f", dest="FILTER", type = 'int', default = 0)
 
     (options, args) = parser.parse_args()
 
@@ -40,6 +41,10 @@ if __name__ == '__main__':
     tails = pd.read_csv(infile, sep='\t')
 
     gene_summary = []
+
+    #filtering tails by min length in options. 
+    tails = tails[tails['tail_length'] >= options.FILTER]
+
     for accession, group in tails.groupby('accession'):
         gene_summary.append([accession, len(group), np.mean(group['tail_length']), np.median(group['tail_length'])])
 
