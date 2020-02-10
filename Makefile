@@ -40,6 +40,9 @@ align-to-genome: ## Align rest of reads to genome and intersect with gff file
 	#Now aligns read 2, not read 1.
 	STAR --genomeDir $(genomeDir) --outSAMtype BAM SortedByCoordinate --outSAMattributes NH HI AS nM jM --alignIntronMax 1 --runThreadN 24 --outFilterMultimapNmax 1 --clip3pNbases $(clip3pR2) --outFilterMismatchNoverLmax 0.04 --outFilterIntronMotifs RemoveNoncanonicalUnannotated --readFilesCommand $(readCommand) --outSJfilterReads Unique --readFilesIn $(fastq2) $ --outFileNamePrefix $(outdir)/STAR_ > $(outdir)/stdOut_logFile.txt
 
+index: ##indexes the bam file, for igv viewing.
+	samtools index $(outdir)/STAR_Aligned.sortedByCoord.out.bam
+
 intersect-gff:
 	bedtools intersect -abam $(outdir)/STAR_Aligned.sortedByCoord.out.bam -b $(gff) -bed -wb -wa -${strand} > $(outdir)/read1.bed
 
@@ -69,9 +72,12 @@ clean:
 
 # all: parseArgs align-to-genome intersect-gff filter_bam signal-from-raw signal-plot tail-seq summary clean ## Run all at once
 
-testingall: parseArgs align-to-genome intersect-gff signal-from-raw pal-seq plot-model summary
+testingall: parseArgs align-to-genome index intersect-gff signal-from-raw pal-seq plot-model summary
 
 testing: signal-from-raw pal-seq plot-model summary
+
+testingpal: pal-seq plot-model summary
+
 
 # all_from_bam: intersect-gff filter_bam signal-from-raw signal-plot tail-seq summary ## Run without STAR aligning
 
