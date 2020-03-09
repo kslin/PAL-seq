@@ -1,7 +1,7 @@
 
 #####################################################
 #  Demultiplexing script for PALseq V3 pipeline
-#  Expects a six nucleotide barcode as the first 6 nucleotides
+#  Expects a six nucleotide barcode after the first 5 nt
 #  of FASTQ1. Does not check chastity filter. Allows 1 error.
 #  First input is barcode file, barcode tab sample name
 #  Second input is FASTQ1.
@@ -43,7 +43,7 @@ for record1 in genFastq1: #iterate thru fastq
 	record2 = next(genFastq2) #same order
 	recordIntensity = next(genIntensity)
 	for strSampleName, tupVal in dictBarcodes.items(): 
-		if tupVal[0].match(str(record1.seq[:6])) is not None:
+		if tupVal[0].match(str(record1.seq[5:11])) is not None:
 			tupVal[1].write(record1.format("fastq"))
 			tupVal[2].write(record2.format("fastq"))
 			tupVal[3].write(recordIntensity)
