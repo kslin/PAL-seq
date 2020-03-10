@@ -35,7 +35,9 @@ with open(sys.argv[1],'r') as haBarcodes:
 genBarcodes = {}
 haFastq1 = gzip.open(sys.argv[2], "rt") #open fastq1
 haFastq2 = gzip.open(sys.argv[3], "rt") #open fastq2
-haIntensity = open(sys.argv[4], "rt") #open fastq2
+haIntensity = gzip.open(sys.argv[4], "rt") #open instensity, also gzipped. 
+next(haIntensity) #Skip header.
+
 genFastq1 = SeqIO.parse(haFastq1, "fastq") #generators
 genFastq2 = SeqIO.parse(haFastq2, "fastq")
 genIntensity = (i for i in haIntensity)

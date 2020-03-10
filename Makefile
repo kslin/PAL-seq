@@ -48,7 +48,7 @@ intersect-gff:
 
 #ARE YOU USING A BEDFILE?
 signal-from-raw: ## generate normalized fluorscent signal for each read. 
-	python3 /lab/solexa_bartel/teisen/RNAseq/Scripts/PALseqV3/tail-seq-scripts/get_signal_from_raw_PALV3.py --f1 $(fastq1) --f2 $(fastq2) -i $(intensity) -s $(standard_file) -o $(outdir) --strand ${strand} -b
+	python3 /lab/solexa_bartel/teisen/RNAseq/Scripts/PALseqV3/tail-seq-scripts/get_signal_from_raw_PALV3.py --f1 $(fastq1) --f2 $(fastq2) -i $(intensity) -s $(standard_file) -o $(outdir) --strand ${strand}
 
 pal-seq: ## 
 	python3 /lab/solexa_bartel/teisen/RNAseq/Scripts/PALseqV3/tail-seq-scripts/tail_length_lin_mod.py -o $(outdir)
