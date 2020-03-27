@@ -78,7 +78,7 @@ def parse_read1_BAM(outdir):
     return(softClippingDict)
 
 def parse_read2(fastq2, keep_dict, standard_dict):
-    """Parse fastq1 file, extract reads that match standard sequences.
+    """Parse fastq2 file, extract reads that match standard sequences.
 
     Arguments:
         fastq2: openened fastq2 file, with lines as binary. 

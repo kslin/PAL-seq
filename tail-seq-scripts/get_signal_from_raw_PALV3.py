@@ -83,6 +83,7 @@ if __name__ == '__main__':
 
     keep_dict, standard_reads = preprocess_helpers.parse_read2(fastq2open, keep_dict, standard_dict)
     fastq2open.close()
+    # pdb.set_trace()
 
     # write table of read_IDs, 3p ends, accession IDs
     all_reads = pd.concat([standard_reads, reads_dedup], axis=0).drop_duplicates(subset=['read_ID'], keep='first')
@@ -114,9 +115,7 @@ if __name__ == '__main__':
     logfile.write('Skipped due to low quality read2:\t{}\n'.format(len(dropped_read1)))
     logfile.write('Reads for calculating normalized T-signal\t{}\n'.format(len(keep_dict)))
     t0 = time.time()
-
     dropped_intensity, num_reads_kept = get_signal_helpers.calculate_intensities(options.INTENSITY, keep_dict, options.OUTDIR, config.FUTURES)
-
     dropped_intensity_std, num_reads_kept_std = get_signal_helpers.calculate_intensities(options.INTENSITY, standard_keep_dict, options.OUTDIR, config.FUTURES, std = True)
 
     logfile.write('Time to calculate normalized T-signal\t{}\n'.format(str(datetime.timedelta(seconds=int(time.time()-t0)))))

@@ -32,7 +32,7 @@ FUTURES = 1 # number of processes, set to 1 if not using multiprocessing
 LEN1, LEN2 = 26, 49 # length of read1 and read2
 SIGNAL_COL_START = 4 # column in intensity file where intensity values start
 SIGNAL_COL_END = (4*(LEN1 + LEN2)) + 4 # column in intensity file where intensity values end
-NUM_SKIP, NUM_SKIP_2 = 10, 6 # number of nucleotides to skip in the beginning of read 1 or end of read 2, respectively, when normalizing intensities (usually 10 and 5)
+NUM_SKIP, NUM_SKIP_2 = 1, 6 # number of nucleotides to skip in the beginning of read 1 or end of read 2, respectively, when normalizing intensities (usually 10 and 5)
 NUC_ORDER = ['A','C','G','T'] # order of nucleotides in intensity file
 # UPPERBOUND, LOWERBOUND = 5, -5 # bounds for normalized T-signal
 CHUNKSIZE = 1000 # number of intensities to evaluate at a time
@@ -40,8 +40,8 @@ NAN_LIMIT = 5 # number of positions with no signal in the intensity file allowed
 QUAL = True #If true, only one mismatch is allowed to call a tail with the first 11 nt being T. Else, two mismatches are allowed. 
 #Gzip status for fastq and intensity files
 FASTQ_GZIP = False #if false, extension is .txt, if True extension is .txt.gz
-TRIM_BASES = 14 #adapter length of read 1
-OPTIM_CONC = 2 #cycle no corresponding to the conccentration that is used for the linear model. 0 is the background (no streptavidin) cycle
+TRIM_BASES = 15 #adapter length of read 1
+OPTIM_CONC = 1 #cycle no corresponding to the conccentration that is used for the linear model. 0 is the background (no streptavidin) cycle
 
 # WINDOW_SIZE, CUTOFF = 40, -20
 

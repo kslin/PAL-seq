@@ -227,7 +227,8 @@ def calculate_intensities(intensity_file, keep_dict, outdir, num_processes, std 
         line = line.split()
         line_num += 1
         read_ID = config.intensity_line_to_ID(line)
-
+        #Why is there a try/except here? TJE 2020 03 13. What is the problem? the keep_dict keys? 
+        #Because most lines in the intensity files aren't in the bed mapped file. 
         try:
             if std: 
                 seq, TailBeginLength, accession = keep_dict[read_ID]
@@ -279,7 +280,9 @@ def calculate_intensities(intensity_file, keep_dict, outdir, num_processes, std 
                 num_reads_kept += write_str.count('\n')
                 outfile.write(write_str)
     
-
+    print(len(IDs))
+    print(len(read2s))
+    print(len(starts))
     # calculate t-signals for the last chunks
     if num_processes > 1:
         if ix > 0:

@@ -27,7 +27,7 @@ state=True
 # readCommand=zcat #Note that this must be set along with the same argument in the config file.
 readCommand= - #Note that this must be set along with the same argument in the config file.
 clip3pR2=10 #This should probably be 5. 
-clip5pR1=14 #???
+clip5pR1=15 #???
 
 parseArgs:
 	mkdir ${outdir}
