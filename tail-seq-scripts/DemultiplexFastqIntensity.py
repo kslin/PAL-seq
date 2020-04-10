@@ -14,6 +14,12 @@
 #  2019 09 19
 #####################################################
 
+
+###################
+## MODIFY THIS TO ALLOW OUT OF ORDER IFILE READS
+# TJE 2020 04 09
+###################
+
 import gzip
 from Bio import SeqIO
 import sys
