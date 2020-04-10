@@ -115,6 +115,8 @@ if __name__ == '__main__':
     logfile.write('Skipped due to low quality read2:\t{}\n'.format(len(dropped_read1)))
     logfile.write('Reads for calculating normalized T-signal\t{}\n'.format(len(keep_dict)))
     t0 = time.time()
+    # print('length of keepdict, line 19')
+    # print(len(keep_dict))
     dropped_intensity, num_reads_kept = get_signal_helpers.calculate_intensities(options.INTENSITY, keep_dict, options.OUTDIR, config.FUTURES)
     dropped_intensity_std, num_reads_kept_std = get_signal_helpers.calculate_intensities(options.INTENSITY, standard_keep_dict, options.OUTDIR, config.FUTURES, std = True)
 

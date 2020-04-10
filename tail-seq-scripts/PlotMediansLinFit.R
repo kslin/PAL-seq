@@ -1,7 +1,7 @@
 library(tidyverse)
 source('/lab/solexa_bartel/teisen/RNAseq/Scripts/general/ggplot_theme.R')
 args <- commandArgs(trailingOnly = TRUE)
-
+# args = '/lab/solexa_bartel/teisen/Tail-seq/PALseqV3/Run20200213/data/total'
 StdMedians <- read_tsv(paste0(args[1],'/standard_medians.txt'))
 ModelParams <- read_tsv(paste0(args[1],'/model_params.txt'))
 AllTagsStds <- read_tsv(paste0(args[1],'/standard_tail_lengths.txt'))
@@ -10,11 +10,14 @@ AllTags <- read_tsv(paste0(args[1],'/mapped_tail_lengths_stds_removed.txt'))
 
 StdMediansGat <- gather(StdMedians, key = concentration, value = intensity, -nucleotide_length)
 
-BestFit <- as_tibble(apply(ModelParams[,c(1,2)],1,function(x){x[1]*(0:350) + x[2]}),.name_repair='unique')
+BestFit <- as_tibble(
+	apply(ModelParams[,c(1,2)],1,function(x){
+			x[1]*seq(0,1.5,length.out = 1000) + x[2]
+		}
+	),.name_repair='unique')
 colnames(BestFit) = colnames(StdMedians[,-1])
-
-BestFit$nucleotide_length <- 0:350
-BestFitGat <- gather(BestFit, key = concentration, value = intensity, -nucleotide_length)
+BestFit$intensity <- seq(0,1.5,length.out = 1000)
+BestFitGat <- gather(BestFit, key = concentration, value = nucleotide_length, -intensity)
 
 #pearson data frame
 ModelParamsPlot = tibble(
@@ -23,16 +26,16 @@ ModelParamsPlot = tibble(
 print(ModelParamsPlot)
 ##Plotting
 pFit <- ggplot(data = StdMediansGat) + 
-	geom_line(data = BestFitGat,  aes(x = nucleotide_length + 12, y = intensity), linetype = 'dashed', color = 'grey') +
-	geom_point(data = StdMediansGat, aes(x = nucleotide_length + 12, y = intensity), size = 0.5) + 
-	geom_text(data = StdMediansGat, aes(x = nucleotide_length + 12, y = intensity, label = nucleotide_length + 12),nudge_x = 0, nudge_y = 0.5, size = 1) +
-	geom_text(data = ModelParamsPlot, aes(x = 40, y = 1.5, label = pearson), size = 2) + 
+	geom_line(data = BestFitGat,  aes(y = nucleotide_length + 11, x = intensity), linetype = 'dashed', color = 'grey') +
+	geom_point(data = StdMediansGat, aes(y = nucleotide_length + 11, x = intensity), size = 0.5) + 
+	# geom_text(data = StdMediansGat, aes(y = nucleotide_length + 11, x = intensity, label = nucleotide_length + 11),nudge_y = 0, nudge_x = 0.5, size = 1) +
+	# geom_text(data = ModelParamsPlot, aes(y = 40, x = 1.5, label = pearson), size = 2) + 
 	facet_wrap(~concentration, ncol = 1) + 
 	theme_tim_label()
-
+# break
 pStdCDF <- ggplot(data = AllTagsStds, aes(x = tail_length, color = as.factor(accession))) + 
 	stat_ecdf() + 
-	geom_vline(xintercept = unique(as.numeric(as.character(AllTagsStds$accession))) + 12, linetype = 'dashed',color = 'grey') +
+	geom_vline(xintercept = unique(as.numeric(as.character(AllTagsStds$accession))), linetype = 'dashed',color = 'grey') +
 	theme_tim_label()
 
 AllTags[AllTags$tail_length > 300,]$tail_length = 300

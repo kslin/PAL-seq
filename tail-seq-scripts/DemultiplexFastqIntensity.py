@@ -21,6 +21,9 @@ import regex
 
 #Generate the barcode dictionary
 dictBarcodes = {}
+BcUnkF1 = open(sys.argv[5] + '/' + 'BarcodeUnknown' + '_1.txt', 'w+')
+BcUnkF2 = open(sys.argv[5] + '/' + 'BarcodeUnknown' + '_2.txt', 'w+')
+BcUnkHits = open(sys.argv[5] + '/' + 'BarcodeUnknown' + '_hits.txt', 'w+')
 with open(sys.argv[1],'r') as haBarcodes:
 	for line in haBarcodes: #creates a dict: (regex, filehandle)
 		strBarcode    = line.split("\t")[0]
@@ -50,6 +53,11 @@ for record1 in genFastq1: #iterate thru fastq
 			tupVal[2].write(record2.format("fastq"))
 			tupVal[3].write(recordIntensity)
 			break
+	else: #added to write true unkown barcodes to a file.
+		BcUnkF1.write(record1.format("fastq"))
+		BcUnkF2.write(record2.format("fastq"))
+		BcUnkHits.write(recordIntensity)
+
 
 #close all files.
 haFastq1.close()
@@ -59,3 +67,6 @@ for tups in dictBarcodes.values():
 	tups[1].close()
 	tups[2].close()
 	tups[3].close()
+BcUnkF1.close()
+BcUnkF2.close()
+BcUnkHits.close()

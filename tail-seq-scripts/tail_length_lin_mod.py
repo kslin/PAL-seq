@@ -60,14 +60,16 @@ if __name__ == '__main__':
 
 
     # create linear model, returns an array with the linear model parameters.
-    LinRegArr = tail_length_helpers.train_model(training_array_dict,model_params_file,std_meds_file)
+    LinRegArr, LogitParams = tail_length_helpers.train_model(training_array_dict,model_params_file,std_meds_file)
 
     print('{:.3f} seconds'.format(time.time() - t0))
     print("Calculating tail-lengths...")
     t0 = time.time()
 
     #may not need parallelization.
+    # all_ids, all_tls = tail_length_helpers.get_batch_tail_length(signal_file, LinRegArr)
     all_ids, all_tls = tail_length_helpers.get_batch_tail_length(signal_file, LinRegArr)
+
     print('{:.3f} seconds'.format(time.time() - t0))
 
     # creat DataFrame of tail length values

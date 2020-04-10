@@ -6,6 +6,7 @@ import pdb
 import scipy.stats as ss
 import sys
 import statsmodels.nonparametric.kernel_regression as kr
+import nlopt
 
 def read_training_set(infile):
     """
@@ -23,6 +24,31 @@ def read_training_set(infile):
 
     return training_array_dict, signal_file.loc[:,(0,1)]
 
+def optimize_logistic(params, grad, x, data):
+    params = np.exp(params) #exponentiate
+    y = gen_logistic(params, x)
+    SUM_OF_SQUARES = np.sum((data - y)**2)
+    return(SUM_OF_SQUARES)
+
+def gen_logistic(params, x):
+    A = params[0] #lower asymptote
+    L = params[1] #max val
+    k = params[2] #steepness
+    m = params[3] #x val at midpoint
+
+    y = L / (1 + np.exp(-k * (x - m))) - A
+
+    return(y)
+
+def gen_logistic_rev(params, y):
+    A = params[0] #lower asymptote
+    L = params[1] #max val
+    k = params[2] #steepness
+    m = params[3] #x val at midpoint
+
+    x = np.log((L - (y + A)) / (y + A)) / -k + m
+
+    return(x)
 
 def train_model(training_array_dict, training_param_file, med_param_file):
     """Get linear model parameters.
@@ -51,9 +77,20 @@ def train_model(training_array_dict, training_param_file, med_param_file):
     mask[np.where(medArr[:,0] == (324 - (config.LEN1 - config.TRIM_BASES)))] = False
     medArr = medArr[mask,:]
 
-    #linear regression
-    LinRegTup = [ss.linregress(medArr[:,(0,(1+i))])[:] for i in range(config.NUM_SKIP_2)]
+    #nlopt logistic
+    opt = nlopt.opt(nlopt.LN_NELDERMEAD, 4)
+    opt.set_min_objective(lambda params, grad: optimize_logistic(params, grad, x = medArr[:,0][:], data = medArr[:,config.OPTIM_CONC + 1][:]))
+    opt.set_ftol_rel(1E-5)
+    xopt = np.exp(opt.optimize(np.log(np.array([5, 1, 0.1, 100]))))
+    opt_val = opt.last_optimum_value()
+    result = opt.last_optimize_result()
 
+    #linear regression
+    #Note on 2020 04 09: I've made the dependent variable the std tail length
+    # LinRegTup = [ss.linregress(medArr[:,((0, 1+i))])[:] for i in range(config.NUM_SKIP_2)]
+    LinRegTup = []
+    for i in range(config.NUM_SKIP_2):
+        LinRegTup.append(ss.linregress(medArr[:,((1+i), 0)])[:])
     #Kernel regression.
     # KrObj = kr.KernelReg(medArr[:,0:1], medArr[:,2:3], 'c', 'll')
 
@@ -62,14 +99,17 @@ def train_model(training_array_dict, training_param_file, med_param_file):
     np.savetxt(med_param_file, medArr, header = "\t".join(['nucleotide_length'] + ['conc_' + str(i) for i in range(config.NUM_SKIP_2)]),comments = '',delimiter = '\t') 
     np.savetxt(training_param_file, LinRegArr, header = "\t".join(['slope', 'intercept', 'r_value', 'p_value', 'std_err']),comments = '',delimiter = '\t') 
 
-    return(LinRegArr)
+    #Return only the values from the optim_conc data
+    return(LinRegArr[config.OPTIM_CONC], xopt)
 
 def get_batch_tail_length(signal_file, LinRegArr):
     """
-    Given a signal file, use the model to calculate tail lengths
+    Given a signal file, use the linear model to calculate tail lengths
     """
     # extract metadata
     ids, lengths, signal_arr, preExtT_arr = [], [], [], []
+    slope  = LinRegArr[0]
+    intercept = LinRegArr[1]
 
     with open(signal_file, 'r') as sf:
         for index, line in enumerate(sf):
@@ -77,7 +117,9 @@ def get_batch_tail_length(signal_file, LinRegArr):
             preExtTl = int(line.split("\t")[1]) #nucleotides of tail prior to extension
             signal = float(line.split("\t")[2 + config.OPTIM_CONC])
             #calculate tail length
-            tl = (signal - LinRegArr[config.OPTIM_CONC,1]) / LinRegArr[config.OPTIM_CONC,0]
+            #original
+            # tl = (signal - LinRegArr[config.OPTIM_CONC,1]) / LinRegArr[config.OPTIM_CONC,0]
+            tl = signal * slope + intercept
             tl = np.max((0, tl)) + preExtTl #ReLU tl values. 
             lengths.append(tl)
             ids.append(read_ID)
@@ -92,5 +134,26 @@ def get_batch_tail_length(signal_file, LinRegArr):
         #         preExtT_arr = []
         # tl = KrObj.fit(np.array(signal_arr))[0] + np.array(preExtT_arr)
         # lengths += tl.tolist()
+
+    return ids, lengths
+
+def get_batch_tail_length_logistic(signal_file, LogitParams):
+    """
+    Given a signal file, use the logistic model to calculate tail lengths
+    """
+    # extract metadata
+    ids, lengths, signal_arr, preExtT_arr = [], [], [], []
+
+    with open(signal_file, 'r') as sf:
+        for index, line in enumerate(sf):
+            read_ID = line.split("\t")[0]
+            preExtTl = int(line.split("\t")[1]) #nucleotides of tail prior to extension
+            signal = float(line.split("\t")[2 + config.OPTIM_CONC])
+            #calculate tail length
+            # pdb.set_trace()
+            tl = gen_logistic_rev(LogitParams, signal)
+            tl = np.nan_to_num(tl) + preExtTl #remove nan
+            lengths.append(tl)
+            ids.append(read_ID)
 
     return ids, lengths

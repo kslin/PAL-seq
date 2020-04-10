@@ -9,7 +9,7 @@ import pandas as pd
 
 import config
 import pdb
-
+import sys
 
 def fix_vals(x):
     """Convert negative values to 1."""
@@ -219,7 +219,15 @@ def calculate_intensities(intensity_file, keep_dict, outdir, num_processes, std 
     IDs, read2s, starts, intensity_values = [], [], [], []
     ix = 0
     line_num = 0
+    # ReadCounts20200327 = 0
 
+    # ## Debug
+    # testOut = open('test.txt', 'w+')
+    # for key, val in keep_dict.items():
+    #     testOut.write(key + "\n")
+    # sys.exit()
+    # ## Debug
+    
     if intensity_file[-3:] == ".gz": infile = gzip.open(intensity_file, 'rt') #is the intensity file .gz?
     elif intensity_file[-4:] == ".txt": infile = open(intensity_file, 'r') #not a gzipped file
     else: raise ValueError("Intensity file does not end in .gz or .txt")
@@ -229,12 +237,14 @@ def calculate_intensities(intensity_file, keep_dict, outdir, num_processes, std 
         read_ID = config.intensity_line_to_ID(line)
         #Why is there a try/except here? TJE 2020 03 13. What is the problem? the keep_dict keys? 
         #Because most lines in the intensity files aren't in the bed mapped file. 
+        # pdb.set_trace()
         try:
             if std: 
                 seq, TailBeginLength, accession = keep_dict[read_ID]
-                read_ID = read_ID +"\t"+ accession
-            else: seq, TailBeginLength = keep_dict[read_ID]
-            
+                read_ID = read_ID + "\t" + accession
+            else: 
+                seq, TailBeginLength = keep_dict[read_ID]
+                # ReadCounts20200327 += 1
         except:
             continue
 
@@ -274,15 +284,18 @@ def calculate_intensities(intensity_file, keep_dict, outdir, num_processes, std 
             # otherwise run sequentially
             else:
                 # calculate t-signal
+                # pdb.set_trace()
                 sk, write_str = get_batch_t_signal(chunk)
                 # write to file
                 skipped += sk
                 num_reads_kept += write_str.count('\n')
                 outfile.write(write_str)
     
-    print(len(IDs))
-    print(len(read2s))
-    print(len(starts))
+    # print(len(IDs))
+    # print(len(read2s))
+    # print(len(starts))
+    # print("Number of reads from ReadCounts20200327 counter:")
+    # print(ReadCounts20200327)
     # calculate t-signals for the last chunks
     if num_processes > 1:
         if ix > 0:
