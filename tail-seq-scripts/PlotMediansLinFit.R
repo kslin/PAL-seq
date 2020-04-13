@@ -36,13 +36,17 @@ pFit <- ggplot(data = StdMediansGat) +
 pStdCDF <- ggplot(data = AllTagsStds, aes(x = tail_length, color = as.factor(accession))) + 
 	stat_ecdf() + 
 	geom_vline(xintercept = unique(as.numeric(as.character(AllTagsStds$accession))), linetype = 'dashed',color = 'grey') +
+	scale_x_continuous(name = 'Tail length, nt', expand = c(0,0)) +
+	scale_y_continuous(name = 'Cumulative fraction', expand = c(0,0)) +
+	labs(color = 'Standard') + 
 	theme_tim_label()
 
 AllTags[AllTags$tail_length > 300,]$tail_length = 300
+
 pReadHist <- ggplot(data = AllTags, aes(x = tail_length)) + 
 	geom_histogram(binwidth = 1) + 
-	scale_x_continuous(expand = c(0,0), breaks = c(0:6)*50, labels = c(0:6)*50) +
-	scale_y_continuous(expand = c(0,0)) +
+	scale_x_continuous(name = 'Tail length, nt', expand = c(0,0), breaks = c(0:6)*50, labels = c(0:6)*50) +
+	scale_y_continuous(name = 'Read counts', expand = c(0,0)) +
 	theme_tim_label()
 
 ggsave(plot = pFit, file = paste0(args[1],'/BestFitModels.pdf'), width = 2, height = 8)

@@ -29,6 +29,7 @@ def get_normalized_intensities(intensities, concatSequence):
         intensities: numpy array of shape (config.LEN1 + config.LEN2) x (number of nucleotides i.e. 4)
         concatSequence: string sequence of read1
     """
+    # pdb.set_trace()
 
     # skip the number of starting nucleotides specified in the config file
 
@@ -182,7 +183,7 @@ def get_batch_t_signal(params):
         if normed_signal is not None:
             t_signal = get_t_signal(normed_signal)
             write_str += '{}\t{}\t{}\n'.format(read_ID, str(start),
-                                                  '\t'.join(['{:.3f}'.format(x) for x in t_signal]))
+                                                  '\t'.join(['{:.10f}'.format(x) for x in t_signal]))
 
         else:
             skipped.append(read_ID)
@@ -253,7 +254,7 @@ def calculate_intensities(intensity_file, keep_dict, outdir, num_processes, std 
         starts.append(TailBeginLength)
         intensity_values.append(line[config.SIGNAL_COL_START: config.SIGNAL_COL_END])
         ix += 1
-
+        # pdb.set_trace()
         if ix == config.CHUNKSIZE:
             chunk = (IDs, read2s, starts, np.array(intensity_values, dtype=int))
             IDs, read2s, starts, intensity_values = [], [], [], []
