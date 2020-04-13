@@ -117,8 +117,8 @@ if __name__ == '__main__':
     t0 = time.time()
     # print('length of keepdict, line 19')
     # print(len(keep_dict))
-    dropped_intensity, num_reads_kept = get_signal_helpers.calculate_intensities(options.INTENSITY, keep_dict, options.OUTDIR, config.FUTURES)
-    dropped_intensity_std, num_reads_kept_std = get_signal_helpers.calculate_intensities(options.INTENSITY, standard_keep_dict, options.OUTDIR, config.FUTURES, std = True)
+    dropped_intensity, num_reads_kept = get_signal_helpers.calculate_intensities_alex(options.INTENSITY, keep_dict, options.OUTDIR, config.FUTURES)
+    dropped_intensity_std, num_reads_kept_std = get_signal_helpers.calculate_intensities_alex(options.INTENSITY, standard_keep_dict, options.OUTDIR, config.FUTURES, std = True)
 
     logfile.write('Time to calculate normalized T-signal\t{}\n'.format(str(datetime.timedelta(seconds=int(time.time()-t0)))))
     logfile.write('Skipped due to low quality intensity values\t{}\n'.format(len(dropped_intensity)))

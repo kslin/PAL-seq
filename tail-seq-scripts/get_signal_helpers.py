@@ -6,6 +6,7 @@ import time
 
 import numpy as np
 import pandas as pd
+import math
 
 import config
 import pdb
@@ -87,6 +88,74 @@ def get_normalized_intensities(intensities, concatSequence):
     #Subtract the value of the background
     read2_intensities_normed = np.subtract(read2_intensities_normed[:,], read2_intensities_normed[0,])
 
+    return(read2_intensities_normed)
+
+def get_normalized_intensities_alex(intensities, concatSequence, medianArr):
+    """Use average intensities for the nucleotides in read1 to normalize the signals for read2.
+
+    Arguments:
+        intensities: numpy array of shape (config.LEN1 + config.LEN2) x (number of nucleotides i.e. 4)
+        concatSequence: string sequence of read1
+    """
+    # pdb.set_trace()
+
+    # skip the number of starting nucleotides specified in the config file
+
+    try:
+        # intensities = np.vstack((intensities[config.NUM_SKIP:(config.LEN1 - config.NUM_SKIP_2),:],intensities[-1 * config.LEN2:,:]))
+        # concatSequence = concatSequence[config.NUM_SKIP:(config.LEN1 - config.NUM_SKIP_2)]
+        intensitiesTrim = intensities[config.NUM_SKIP:(config.LEN1 + config.LEN2 - config.NUM_SKIP_2),:]
+        concatSequenceTrim = concatSequence[config.NUM_SKIP:(config.LEN1 + config.LEN2 - config.NUM_SKIP_2)]
+    except:
+        raise ValueError("Intensities and sequences for read1 must be longer than config.NUM_SKIP")
+
+    # if len(intensities) != (config.LEN1 + config.LEN2 - config.NUM_SKIP - config.NUM_SKIP_2):
+    if len(intensitiesTrim) != (config.LEN1 + config.LEN2 - config.NUM_SKIP - config.NUM_SKIP_2):
+        raise ValueError("Intensities length not equal to config.LEN1 + config.LEN2")
+
+    # if len(concatSequence) != (config.LEN1 - config.NUM_SKIP - config.NUM_SKIP_2):
+    if len(concatSequenceTrim) != (config.LEN1 + config.LEN2 - config.NUM_SKIP - config.NUM_SKIP_2):
+        raise ValueError("Read1 length must equal to intensity length")
+
+    # convert concatSequence into one-hot encoding of 4 bits
+    ## Changed on 2019 06 13.
+
+    ### Working on this line on 2019 09 23.
+    concatSequenceTrim = np.array([[float(nt == x) for x in config.NUC_ORDER] for nt in concatSequenceTrim])
+
+    # add up the counts for each nucleotide
+    concatSequenceNtCounts = np.sum(concatSequenceTrim, axis=0)
+
+    # return None if one or more of the nucleotides doesn't show up in the concatSequence
+    if np.min(concatSequenceNtCounts) == 0:
+        return None
+
+    # convert intensities to an array and split into read1 and read2 intensities
+    concatSequenceIntensityTrim = intensitiesTrim[:] ##I think it's this line.
+    read2_intensities = intensities[-1 * config.NUM_SKIP_2:]
+
+
+    medianArr = medianArr[config.NUM_SKIP:(config.LEN1 + config.LEN2 - config.NUM_SKIP_2),:]
+    
+    #subtact the 0 from the read2 intensity
+    read2_intensities = np.subtract(read2_intensities[:,], read2_intensities[0,])
+
+    # multiply read1 intensities by one-hot to get intensities for the base called
+    concatSequenceIntensityTrim = np.multiply(concatSequenceTrim, concatSequenceIntensityTrim)
+
+    #normalize each base by the median of all bases for that base
+    concatSequenceIntensityTrim = np.divide(concatSequenceIntensityTrim, medianArr)
+
+    #Get rid of nan. Shouldn't be necessary for many tail length values. 
+    concatSequenceIntensityTrim = np.nan_to_num(concatSequenceIntensityTrim)
+
+    # get average concatSequenceIntensityTrim for each nucleotide
+    norm_vals = np.mean(concatSequenceIntensityTrim, axis = 0) #??
+
+    # divide read2 intensities by normalization values
+    read2_intensities_normed = np.divide(read2_intensities, norm_vals)
+
+    # pdb.set_trace()
     return(read2_intensities_normed)
 
 
@@ -189,6 +258,216 @@ def get_batch_t_signal(params):
             skipped.append(read_ID)
     
     return skipped, write_str
+
+def get_batch_t_signal_alex(params):
+    """
+    Calculate normalized t-signals for a batch of sequences.
+    Return t-signal values as one long string to be written to a file.
+    """
+
+    write_str = ''
+    skipped = []
+
+    # iterate through signals in the batch
+    for (read_ID, read2, start, signal, medianArr) in zip(*params):
+
+        signal = signal.reshape((config.LEN1+config.LEN2, 4))
+        # # impute missing data
+        # signal = impute(signal, config.NAN_LIMIT)
+
+        # # skip if too much missing data
+        # if signal is None:
+        #     skipped.append(read_ID)
+        #     continue
+
+        # calculate normalization
+        # if read_ID == '1101:12788:2690': pdb.set_trace()
+        normed_signal = get_normalized_intensities_alex(signal, read2, medianArr)
+
+        # normalize t-signal and return the output as a string
+        if normed_signal is not None:
+            t_signal = get_t_signal(normed_signal)
+            write_str += '{}\t{}\t{}\n'.format(read_ID, str(start),
+                                                  '\t'.join(['{:.10f}'.format(x) for x in t_signal]))
+
+        else:
+            skipped.append(read_ID)
+    
+    return skipped, write_str
+
+
+def GenMedianIntensities(ifileopen, keep_dict, std):
+    """Iterate through intensity file, and generate median base values as per Alex
+
+    Arguments:
+        ifileopen: open intensity file
+        keep_dict: dictionary of read IDs to sequences
+    """
+
+    ################################################################################
+    # GenNormIntensityValues.py
+    # For generating intensity values for normalization using Alex's method:
+    # 'The relative cluster intensity was calculated by first dividing the fluorescence 
+    #       intensity ofevery sequenced base in the read by the median intensity for that 
+    #       base among all clusters with the same base at the same position, 
+    #       and then taking the average ofthe resulting values over the length ofthe read'
+    # Timothy J. Eisen
+    # 2020 04 13
+    ################################################################################
+
+    AllIntensities =  np.zeros(config.SIGNAL_COL_END - config.SIGNAL_COL_START)
+    MedianList = [([], [], [], []) for i in range(config.LEN1 + config.LEN2)]
+    for line in ifileopen:
+        line = line.split()
+        read_ID = config.intensity_line_to_ID(line)
+        try:
+            if std: 
+                seq, TailBeginLength, accession = keep_dict[read_ID]
+                read_ID = read_ID + "\t" + accession
+            else: 
+                seq, TailBeginLength = keep_dict[read_ID]
+        except:
+            continue
+        seqarray = np.array([[float(nt == x) for x in config.NUC_ORDER] for nt in seq], dtype = int)
+        intensity = np.array(line[config.SIGNAL_COL_START:config.SIGNAL_COL_END], dtype = int).reshape(config.LEN1 + config.LEN2, 4)
+        BaseIntensity = np.multiply(intensity, seqarray)
+    
+        counter = 0
+        for ival in np.nditer(BaseIntensity):
+            pos = math.floor(counter / 4)
+            nt = counter % 4
+            if 0 != int(ival): MedianList[pos][nt].append(int(ival))
+            counter += 1
+    ifileopen.seek(0) #reset the file. 
+    #calculate medians
+    MedianArr = np.zeros((config.LEN1 + config.LEN2) * 4).reshape(config.LEN1 + config.LEN2, 4)
+    counter = 0
+    for pos, SeqTup in enumerate(MedianList):
+        for nt, ivalTup in enumerate(SeqTup):
+            MedianArr[pos, nt] = np.median(ivalTup)
+    MedianArr = np.nan_to_num(MedianArr)
+    return(MedianArr)
+
+def calculate_intensities_alex(intensity_file, keep_dict, outdir, num_processes, std = False):
+    """Iterate through intensity file, extract values for mapping reads, calculate normalized T-signal.
+    This computes intensity values like Alex does.
+    Writes intensities to file.
+
+    Arguments:
+        intensity_file: path to gzipped intensity file
+        keep_dict: dictionary of read IDs to sequences
+        outdir: directory for output files
+        num_processes: number of processes
+    """
+    # keep track of how many reads we skip due having too many 0's
+    skipped = []
+    num_reads_kept = 0
+    if not std: outfile = open(os.path.join(outdir, 'normalized_t_signal_all.txt'), 'w')
+    else: outfile = open(os.path.join(outdir, 'normalized_t_signal_stds.txt'), 'w')
+
+    # if indicated, run parallel version
+    if num_processes > 1:
+        print("Running parallel version")
+        chunks = []
+    else:
+        print("Running non-parallel version Alex")
+
+
+    # read intensity file and check if it's in keep_dict
+    IDs, read2s, starts, intensity_values = [], [], [], []
+    ix = 0
+    line_num = 0
+    
+    if intensity_file[-3:] == ".gz": infile = gzip.open(intensity_file, 'rt') #is the intensity file .gz?
+    elif intensity_file[-4:] == ".txt": infile = open(intensity_file, 'r') #not a gzipped file
+    else: raise ValueError("Intensity file does not end in .gz or .txt")
+
+    #Get normalized values.
+    medianArr = GenMedianIntensities(infile, keep_dict, std)
+    for line in infile:
+        line = line.split()
+        line_num += 1
+        read_ID = config.intensity_line_to_ID(line)
+
+        try:
+            if std: 
+                seq, TailBeginLength, accession = keep_dict[read_ID]
+                read_ID = read_ID + "\t" + accession
+            else: 
+                seq, TailBeginLength = keep_dict[read_ID]
+        except:
+            continue
+
+        IDs.append(read_ID)
+        read2s.append(seq)
+        starts.append(TailBeginLength)
+        intensity_values.append(line[config.SIGNAL_COL_START: config.SIGNAL_COL_END])
+        ix += 1
+        # pdb.set_trace()
+        if ix == config.CHUNKSIZE:
+            chunk = (IDs, read2s, starts, np.array(intensity_values, dtype=int), [medianArr])
+            IDs, read2s, starts, intensity_values = [], [], [], []
+            ix = 0
+
+            # if indicated, run parallel version
+            if num_processes > 1:
+                chunks.append(chunk)
+
+                # once we've read enough chunks, calculate t-signals in parallel
+                if len(chunks) == num_processes:
+                    full_write_str = ''
+                    with concurrent.futures.ProcessPoolExecutor() as executor:
+                        results = executor.map(get_batch_t_signal_alex, chunks)
+
+                        # record how many signals were skipped and write results to a file
+                        for sk, write_str in results:
+                            time.sleep(0.0001)
+                            skipped += sk
+                            num_reads_kept += write_str.count('\n')
+                            full_write_str += write_str
+
+                    outfile.write(full_write_str)
+
+                    full_write_str = ''
+                    chunks = []
+
+            # otherwise run sequentially
+            else:
+                # calculate t-signal
+                # pdb.set_trace()
+                sk, write_str = get_batch_t_signal_alex(chunk)
+                # write to file
+                skipped += sk
+                num_reads_kept += write_str.count('\n')
+                outfile.write(write_str)
+    
+    # calculate t-signals for the last chunks
+    if num_processes > 1:
+        if ix > 0:
+            chunk = (IDs, read2s, starts, np.array(intensity_values, dtype=int), [medianArr])
+            chunks.append(chunk)
+
+        if len(chunks) > 0:
+            with concurrent.futures.ProcessPoolExecutor() as executor:
+                results = executor.map(get_batch_t_signal_alex, chunks)
+                for sk, write_str in results:
+                    skipped += sk
+                    num_reads_kept += write_str.count('\n')
+                    outfile.write(write_str)
+    else:
+        if ix > 0:
+            chunk = (IDs, read2s, starts, np.array(intensity_values, dtype=int), [medianArr])
+            # pdb.set_trace()
+            # calculate t-signal
+            sk, write_str = get_batch_t_signal_alex(chunk)
+
+            # write to file
+            skipped += sk
+            num_reads_kept += write_str.count('\n')
+            outfile.write(write_str)
+    infile.close()
+    outfile.close()
+    return skipped, num_reads_kept
 
 
 def calculate_intensities(intensity_file, keep_dict, outdir, num_processes, std = False):
